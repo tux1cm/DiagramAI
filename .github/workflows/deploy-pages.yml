@@ -1,0 +1,40 @@
+name: Deploy Pages (manual P0 spike)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run prepare:reference
+      - run: npm run check
+      - name: Require confirmed Pages base path
+        env:
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
+        run: test -n "$VITE_BASE_PATH" || (echo "Set VITE_BASE_PATH to / or /confirmed-repository/" && exit 1)
+      - run: npm run build:web
+        env:
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

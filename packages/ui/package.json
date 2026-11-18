@@ -1,0 +1,8 @@
+{
+  "name": "@diagramai/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/P0Shell.tsx", "./styles.css": "./src/styles.css" },
+  "dependencies": { "@diagramai/shared": "*", "@xyflow/react": "12.12.1", "react": "19.3.1" }
+}

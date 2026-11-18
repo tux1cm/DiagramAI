@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DiagramAI",
+  "version": "0.0.0",
+  "identifier": "local.diagramai.app",
+  "build": {
+    "beforeDevCommand": { "script": "npm run dev", "cwd": "../.." },
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": { "script": "npm run build:web:desktop", "cwd": "../.." },
+    "frontendDist": "../../web/dist"
+  },
+  "app": {
+    "windows": [{ "title": "DiagramAI — P0", "width": 1366, "height": 768, "minWidth": 1024, "minHeight": 640 }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'sha256-OrDT5nJLDFEilkfvUwYWDZp72quJJ9etjM+iaqsCNSY='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; frame-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; object-src 'none'; base-uri 'self'",
+      "capabilities": []
+    }
+  },
+  "bundle": { "active": true, "targets": ["nsis"], "icon": ["icons/icon.ico"], "windows": { "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true } } }
+}
