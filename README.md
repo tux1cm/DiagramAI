@@ -1,6 +1,6 @@
 # DiagramAI
 
-P0 đang triển khai — **chưa phải sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md).
+P0 nền tảng Desktop/Web/Neon đã đạt smoke kỹ thuật — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web chạy thật: **https://tux1cm.github.io/DiagramAI/**. Bấm nhãn P0 → Kiểm tra API để kiểm chứng Neon/PostgreSQL, không phải đồng bộ sơ đồ. Báo cáo và giới hạn: [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
@@ -62,18 +62,20 @@ Full dependency audit còn cảnh báo dev-toolchain picomatch; xem `docs/p0-dep
 
 ## Neon P0
 
-Xem [`docs/p0-neon-spike.md`](docs/p0-neon-spike.md). Chỉ có `/v1/health`; chưa có API dự án, đồng bộ hay AI. Không cần Gemini key cho P0. Không gửi credentials vào chat hoặc commit `.env`.
+Xem [`docs/p0-neon-spike.md`](docs/p0-neon-spike.md) và bằng chứng deploy [`docs/p0-status.md`](docs/p0-status.md). Health đã deploy vào project DiagramAI hiện có tại Singapore; Pages gọi DB thật thành công. Chỉ có `/v1/health`; chưa có API dự án, đồng bộ hay AI. Không cần Gemini key cho P0. Không gửi credentials vào chat hoặc commit `.env`.
+
+`npm run test:live` kiểm tra Pages + Neon thật trên 3 viewport bằng Edge Windows (Chromium trên Linux), có browser preflight, chỉ query health. Không tự deploy hoặc thay dữ liệu. Ảnh trong `test-results/live/`.
 
 ## GitHub Pages
 
-Sau khi chủ dự án xác nhận repo và cấu hình Pages dùng GitHub Actions:
+Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/DiagramAI. Pages dùng GitHub Actions và đã deploy thành công. Cấu hình để deploy lại:
 
 1. Đặt repository variable `VITE_BASE_PATH`: `/<tên-repo-đã-chốt>/` cho project site, `/` cho user site/custom domain.
 2. `VITE_API_BASE_URL`: URL HTTPS công khai của Neon Function, không chứa token; có thể để trống khi chưa liên kết Neon.
 3. Chạy workflow **Deploy Pages (manual P0 spike)**. Không tự publish từ build local.
 4. Kiểm tra URL thật, refresh `/#/spike`, CORS trong Chrome.
 
-Chưa có repo/URL thực, workflow chưa chạy trên GitHub. Không mặc định workflow file đồng nghĩa đã deploy thành công.
+`node scripts/p0-github-pages.mjs status` đọc trạng thái qua Git Credential Manager mà không in/lưu token. Mode `setup`/`dispatch` sửa config hoặc deploy repo đã chốt, chỉ chạy khi có ý định publish; không được gọi tự động từ build local. Không mặc định workflow file hoặc dispatch đồng nghĩa deploy thành công.
 
 ## Cấu trúc hiện có
 

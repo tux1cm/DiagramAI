@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 // Repository explicitly confirmed by the owner. No generic account-wide operations.
 const repository = 'tux1cm/DiagramAI';
 const mode = process.argv[2] ?? 'status';
-if (!['status', 'setup', 'dispatch'].includes(mode)) throw new Error('Use status, setup or dispatch');
+if (!['status', 'setup', 'dispatch', 'jobs'].includes(mode)) throw new Error('Use status, setup, dispatch or jobs');
 const credential = spawnSync('git', ['-c', 'credential.interactive=false', 'credential', 'fill'], {
   input: 'protocol=https\nhost=github.com\npath=tux1cm/DiagramAI.git\n\n',
   encoding: 'utf8',
@@ -26,8 +26,16 @@ async function api(path, method = 'GET', body) {
   return { status: response.status, data: response.status === 204 ? null : await response.json() };
 }
 if (mode === 'setup') {
-  const variable = await api('/actions/variables/VITE_BASE_PATH');
-  await api(variable.status === 404 ? '/actions/variables' : '/actions/variables/VITE_BASE_PATH', variable.status === 404 ? 'POST' : 'PATCH', { name: 'VITE_BASE_PATH', value: '/DiagramAI/' });
+  async function variable(name, value) {
+    const existing = await api(`/actions/variables/${name}`);
+    await api(existing.status === 404 ? '/actions/variables' : `/actions/variables/${name}`, existing.status === 404 ? 'POST' : 'PATCH', { name, value });
+  }
+  await variable('VITE_BASE_PATH', '/DiagramAI/');
+  if (process.env.DIAGRAMAI_API_BASE_URL) {
+    const url = new URL(process.env.DIAGRAMAI_API_BASE_URL);
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) throw new Error('API base must be public HTTPS without credentials');
+    await variable('VITE_API_BASE_URL', url.href);
+  }
   const pages = await api('/pages');
   await api('/pages', pages.status === 404 ? 'POST' : 'PUT', { build_type: 'workflow' });
   console.log('Configured Pages GitHub Actions and public base path /DiagramAI/. No secret configured.');
@@ -41,3 +49,9 @@ const pages = await api('/pages');
 console.log(JSON.stringify({ repository, pages: pages.status === 404 ? 'not-enabled' : { url: pages.data.html_url, status: pages.data.status, buildType: pages.data.build_type } }, null, 2));
 const runs = await api('/actions/runs?per_page=5');
 console.log(JSON.stringify((runs.data.workflow_runs ?? []).map(({ id, name, status, conclusion, html_url }) => ({ id, name, status, conclusion, url: html_url })), null, 2));
+if (mode === 'jobs') {
+  for (const run of runs.data.workflow_runs ?? []) {
+    const jobs = await api(`/actions/runs/${run.id}/jobs`);
+    console.log(JSON.stringify({ run: run.id, jobs: jobs.data.jobs?.map(({ name, status, conclusion, steps }) => ({ name, status, conclusion, steps: steps?.map(({ name, status, conclusion }) => ({ name, status, conclusion })) })) }, null, 2));
+  }
+}

@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 const basePath = process.env.VITE_BASE_PATH ?? '/';
 export default defineConfig({
   testDir: './tests/e2e',
+  outputDir: 'test-results/web',
   fullyParallel: true,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {

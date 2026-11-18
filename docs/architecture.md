@@ -26,7 +26,7 @@ React UI + editor adapter → diagram-core (model / commands / history)
 
 ## Ranh giới chưa kiểm chứng
 
-Unit test dùng database dependency giả chỉ chứng minh handler, **không chứng minh Neon hoạt động**. Playwright chạy trên browser Windows, **không phải WebView2**. Tauri đã build NSIS và mở binary release smoke test sau khi cài Rust; chưa kiểm thử cài/gỡ hoặc visual WebView2 đầy đủ. GitHub workflow chưa có bằng chứng chạy từ GitHub.
+Unit test dùng database dependency giả chỉ chứng minh handler; ngoài ra đã có **live test Pages → Neon → SELECT 1** trên project có sẵn. E2E Web local/live dùng Edge, CI dùng Chromium; riêng `test:desktop` cài/gỡ NSIS và kết nối WebView2 qua CDP loopback với profile riêng để kiểm tra viewport/minimize/navigation. GitHub CI và Pages workflow đã có bằng chứng SUCCESS. Đây là smoke P0, không phải bảo đảm production security, offline persistence hay engine v1.
 
 ## Quy ước để triển khai P2 trở đi
 

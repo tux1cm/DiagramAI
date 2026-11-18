@@ -2,7 +2,11 @@
 
 ## Trạng thái
 
-Chưa liên kết/deploy vào Neon của người dùng. Không có project ID, branch, invocation URL hay credential. Đây là hướng dẫn và mã chuẩn bị, không phải kết quả live test.
+Đã deploy và live test ngày 18/11/2026 trên **project DiagramAI có sẵn**, ID `blue-mode-25353507`, Singapore, branch `production`. Không tạo project/branch mới, không sửa schema/dữ liệu. Bằng chứng: `docs/p0-status.md`. Các lệnh dưới đây là hướng dẫn tái hiện; không chạy deploy trùng nếu không định publish lại.
+
+API base công khai: https://br-noisy-waterfall-b37wduo3-health.compute.c-4.ap-southeast-1.aws.neon.tech/
+
+Neon tự inject DATABASE_URL vào Function; local link dùng `--no-env-pull`. Org Tu được CLI xác nhận plan Free; không bật billing/dịch vụ bổ sung. Không coi Free là vô hạn hoặc cam kết quota cố định.
 
 Tài liệu được kiểm tra ngày 18/11/2026: https://neon.com/docs/compute/functions/get-started
 
@@ -16,7 +20,7 @@ Thông tin Free Tier/Functions beta và khả năng trên **project cụ thể**
 
 ## Thực hiện sau khi chủ dự án xác nhận
 
-Thực hiện từ `apps/api`, dùng Neon CLI hiện hành. Không tự tạo project mới; chọn project DiagramAI đã có, region Singapore và branch thử nghiệm được duyệt.
+Thực hiện từ `apps/api`, dùng Neon CLI hiện hành. Không tự tạo project mới; chọn project DiagramAI đã có, region Singapore. P0 dùng branch production hiện hữu chỉ với health SELECT 1; phase có ghi dữ liệu phải chốt dev branch riêng.
 
 ```powershell
 npx neon@latest --version
@@ -25,6 +29,10 @@ npx neon@latest dev
 ```
 
 `link` có thể mở OAuth và ghi `.neon`/`.env`; các file này đã bị ignore. Không kéo file credentials vào `apps/web`. Đặt `CORS_ALLOWED_ORIGINS` trong environment của branch/function theo Console/CLI hiện hành. Thêm **origin** Pages `https://<chủ-repo>.github.io`, không thêm đường dẫn `/<repo>/`. Dev origin localhost và 127.0.0.1 là hai giá trị khác nhau. Không dùng `*`.
+
+Chủ dự án yêu cầu không mở Chrome. Đã dùng Cốc Cốc cho OAuth; preload opt-in `scripts/neon-in-app-browser.mjs` chỉ thay thao tác mở browser, giữ nguyên PKCE/state/timeout/callback/credential storage. Nếu không đặt `DIAGRAMAI_LOGIN_BROWSER`, preload không mở browser mặc định và có thể dùng link in ra trong trình duyệt Review. Không sửa global Neon CLI.
+
+Triển khai đã chạy bằng Neon CLI 8.4.4, chỉ định rõ project/branch và `functions deploy health --src functions/health.ts --runtime nodejs24 --env CORS_ALLOWED_ORIGINS=...`. Không dùng full service provisioning hoặc API key Gemini.
 
 Sau khi review branch và cấu hình:
 

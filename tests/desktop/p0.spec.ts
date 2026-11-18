@@ -60,6 +60,15 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await expect(page.getByRole('heading', { name: 'DiagramAI · P0' })).toBeVisible();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await expect(page.locator('.react-flow__edge')).toHaveCount(1);
+    const apiButton = page.getByRole('button', { name: 'Kiểm tra API' });
+    if (await apiButton.isEnabled()) {
+      await apiButton.click();
+      await expect(page.getByRole('status')).toHaveText('API và PostgreSQL phản hồi OK', { timeout: 15000 });
+      await page.screenshot({ path: testInfo.outputPath('webview2-api.png') });
+      testInfo.annotations.push({ type: 'api', description: 'Live Neon health verified from WebView2 origin.' });
+    } else {
+      testInfo.annotations.push({ type: 'api', description: 'Not configured in this build; no live API assertion.' });
+    }
     await page.reload();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await page.getByRole('link', { name: '← Về giao diện tham chiếu' }).click();

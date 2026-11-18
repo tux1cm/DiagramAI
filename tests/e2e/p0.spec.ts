@@ -19,7 +19,8 @@ test('hash navigation and refresh keep the React Flow spike working', async ({ p
   await expect(page.getByRole('heading', { name: 'DiagramAI · P0' })).toBeVisible();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
   await expect(page.locator('.react-flow__edge')).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Kiểm tra API' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Kiểm tra API' })).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText('Chưa kiểm tra');
   await page.reload();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
   await page.getByRole('link', { name: '← Về giao diện tham chiếu' }).click();

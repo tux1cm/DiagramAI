@@ -27,4 +27,4 @@ if (!response.ok || response.headers.get('access-control-allow-origin') !== orig
   body.status !== 'ok' || body.apiVersion !== 'v1' || body.database !== 'ok') throw new Error('GET health FAIL');
 const rejected = await fetch(url, { headers: { Origin: 'https://untrusted.invalid' }, signal: AbortSignal.timeout(10000) });
 if (rejected.status !== 403 || rejected.headers.has('access-control-allow-origin')) throw new Error('Origin rejection FAIL');
-console.log('PASS: live health + PostgreSQL + preflight + disallowed origin. Still verify from Chrome on the real Pages URL.');
+console.log('PASS: live health + PostgreSQL + preflight + disallowed origin. Still verify from a browser on the real Pages URL.');
