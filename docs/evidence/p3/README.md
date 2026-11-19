@@ -9,5 +9,6 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `webview2-p3-preview.png`, `webview2-p3-insert.png`: thao tác chèn thật trong app đã cài. Test còn chèn hình tồn tại rồi Undo về vị trí trước kéo.
 - `webview2-*.png`, `webview2-*-metrics.json`: native visual 3 viewport sau fit cùng camera. Các ảnh P2 controls/API giữ phần hồi quy.
 - `build.txt`, `release-manifest.json`: log Windows build thành công và hash bộ cài P3; không commit EXE hoặc secrets.
+- `live-*-pages-p3-insertion.png`: chèn khối trên Pages thật sau deploy `1aa9544`, 3 viewport; test kiểm tra highlight và Undo phục hồi cạnh UUID cũ. `live-*-pages-neon-health.png` giữ probe PostgreSQL/CORS thật.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.

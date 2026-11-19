@@ -1,6 +1,6 @@
 # DiagramAI
 
-P2 đã được chủ dự án xác nhận OK; P3 Smart Connector đạt kiểm thử local Web/Desktop, chờ CI/deploy và nghiệm thu — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p3-status.md`](docs/p3-status.md); lịch sử: [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
+P2 đã được chủ dự án xác nhận OK; P3 Smart Connector đạt kiểm thử Web/Desktop, CI/Pages và live, chờ nghiệm thu — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p3-status.md`](docs/p3-status.md); lịch sử: [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 

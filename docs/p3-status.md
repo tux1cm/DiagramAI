@@ -1,6 +1,6 @@
 # P3 — Smart Connector, chèn hình và snap
 
-Ngày: 2026-11-19. **P2 đã được chủ dự án xác nhận OK; P3 đạt kiểm thử local Web/Desktop, chờ CI/deploy và nghiệm thu. Chưa chuyển P4; site public vẫn bản trước cho tới khi deploy hoàn tất.**
+Ngày: 2026-11-19. **P2 đã được chủ dự án xác nhận OK; P3 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live, chờ chủ dự án nghiệm thu. Chưa chuyển P4.**
 
 ## Phần triển khai
 
@@ -25,7 +25,8 @@ ADR: [`decisions/0004-p3-insertion-and-snapping.md`](decisions/0004-p3-insertion
 | Đường cong/bo góc lệch trục | **6/6 PASS** bổ sung trên 3 viewport; không chỉ thử Bézier thẳng cùng trục |
 | Windows build/native | **PASS** full build NSIS/Web, cài/gỡ cách ly, 3 viewport, P2 regressions, chèn palette/hình tồn tại, highlight/Undo/Redo, live Neon health. Visual **392/316/378 pixels**, tối đa **0.0410%** (<0.3%) |
 | Dependency audit | Full `npm audit --json` **0 vulnerabilities**, không thêm dependency |
-| CI/Pages/live | Chưa deploy P3 |
+| CI/Pages | **SUCCESS** commit `1aa9544`: [CI 44475258468](https://github.com/tux1cm/DiagramAI/actions/runs/44475258468), [Pages 44475269083](https://github.com/tux1cm/DiagramAI/actions/runs/44475269083) |
+| Live Pages/Neon | **3/3 PASS**: site thật 1366/1920/1280, tạo cạnh/đổi kiểu, chèn hình với highlight, Undo phục hồi cạnh UUID cũ, beforeunload/reload, browser CORS/preflight và PostgreSQL health thật |
 
 ## Lỗi phát hiện trong kiểm thử
 

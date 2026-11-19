@@ -1,13 +1,14 @@
 # Changelog
 
-## Unreleased — P3 Smart Connector
+## 0.0.0 — 2026-11-19 — P3 Smart Connector technical PASS
 
 - Atomic InsertNodeOnEdge cho hình mới/tồn tại rời; highlight/hit-test nét SVG thật theo CSS pixels và pan/zoom.
 - Giữ kiểu/markers/style, nhãn chỉ trên đoạn A→C; một Undo khôi phục cạnh cũ và vị trí C trước kéo, Redo giữ UUID ổn định.
 - Guard endpoints, connected/grouped/multi nodes, cạnh chồng nhau, drop miss, Escape/pointercancel/blur; không tự rewire trường hợp mơ hồ.
 - Snap lưới/tâm/cạnh có guideline, nhập zoom chính xác; orthogonal bounded obstacle routing với fallback giữ kết nối.
-- Đang kiểm thử theo `docs/p3-status.md`; chưa triển khai persistence/file P4.
-- Local PASS: 119 unit tests, full Web subpath 94 PASS + 2 skip lặp stress có chủ đích, 6 ca đường cong/bo góc lệch trục bổ sung, Windows build và WebView2 thật. Audit 0 vulnerabilities; chưa tuyên bố CI/live trước deploy.
+- Báo cáo `docs/p3-status.md`; chưa triển khai persistence/file P4.
+- Local PASS: 119 unit tests, full Web subpath 94 PASS + 2 skip lặp stress có chủ đích, 6 ca đường cong/bo góc lệch trục bổ sung, Windows build và WebView2 thật. Audit 0 vulnerabilities.
+- Commit `1aa9544` đã push, CI/Pages SUCCESS và 3/3 live tests gồm chèn cạnh/Undo trên site thật PASS. P3 chờ chủ dự án nghiệm thu.
 
 ## P2 follow-up — connector feedback
 
