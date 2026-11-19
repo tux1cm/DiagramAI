@@ -1,6 +1,6 @@
 # P2 — Domain model và engine vẽ
 
-Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt kiểm thử local Web/Desktop; đang chuẩn bị CI/deploy, chờ chủ dự án nghiệm thu. Chưa bắt đầu P3/P4.**
+Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live; chờ chủ dự án nghiệm thu. Chưa bắt đầu P3/P4.**
 
 ## Phần triển khai
 
@@ -26,7 +26,8 @@ Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt
 | Dependency audit P2 | Full `npm audit --json`: **0 advisories** |
 | Windows build | **PASS** `build.bat --no-pause`, Rust release + NSIS + Web, output cũ archive nguyên vẹn |
 | Desktop/WebView2 | **PASS** cài/gỡ cách ly, 3 viewport, minimize/restore, inline node/edge label, drag/resize, connect, clipboard, Undo và live Neon health. Pixel mismatch: **346/316/338** ở 1366/1920/1280, tối đa **0.0367%**, ngưỡng 0.3% |
-| CI/Pages/live P2 | Chưa deploy; site công khai vẫn P1 cho tới khi đủ local test |
+| CI/Pages P2 | **SUCCESS** commit `de6a3eb`: [CI 44466668532](https://github.com/tux1cm/DiagramAI/actions/runs/44466668532), [Pages 44466683426](https://github.com/tux1cm/DiagramAI/actions/runs/44466683426) |
+| Live Pages/Neon | **3/3 PASS** ở 1366/1920/1280: editor P2, inline text, resize/Undo, properties, beforeunload/reload, diagnostics và health PostgreSQL thật qua browser CORS/preflight |
 
 ## Lỗi đã phát hiện và sửa
 

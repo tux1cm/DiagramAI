@@ -1,6 +1,6 @@
 # DiagramAI
 
-Engine vẽ P2 đã đạt kiểm thử local Web/Desktop, chờ CI/deploy và chủ dự án nghiệm thu — **chưa phải editor sản phẩm v1.0**. P0/P1 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p2-status.md`](docs/p2-status.md); lịch sử: [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
+Engine vẽ P2 đã đạt kiểm thử Web/Desktop, CI/Pages và live, chờ chủ dự án nghiệm thu — **chưa phải editor sản phẩm v1.0**. P0/P1 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p2-status.md`](docs/p2-status.md); lịch sử: [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 

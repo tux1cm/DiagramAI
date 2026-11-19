@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — P2 drawing engine
+## 0.0.0 — 2026-11-19 — P2 drawing engine technical PASS
 
 - P1 đã được chủ dự án xác nhận PASS; triển khai P2, chưa chuyển P3/P4.
 - Domain Zod/UUID, registry, validation/migration, atomic commands và immutable history độc lập React Flow.
@@ -8,6 +8,7 @@
 - Clipboard nội bộ + OS best-effort, đa chọn, nhóm/căn chỉnh, properties và keyboard shortcuts; Undo/Redo cho từng gesture.
 - Giữ document khi đi/đến diagnostics; dữ liệu vẫn trong bộ nhớ, không giả lưu/sync/AI. Bằng chứng ở `docs/p2-status.md`.
 - Local PASS: lint/typecheck, 75 unit tests, 57 E2E executions/subpath, 3 kiểm tra neo live bổ sung, Windows NSIS build và cài/gỡ + thao tác WebView2 thật. Audit 0 advisories; còn warning bundle/toolchain được ghi rõ.
+- Commit `de6a3eb` đã push; CI/Pages SUCCESS, 3/3 live tests trên site thật và Neon health PASS. P2 chờ chủ dự án nghiệm thu; chưa bắt đầu P3.
 
 ## 0.0.0 — 2026-11-19 — P1 React UI technical PASS
 
