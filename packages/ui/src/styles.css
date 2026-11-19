@@ -33,3 +33,4 @@ a:focus-visible, button:focus-visible { outline: 3px solid #4867f4; outline-offs
 .editor-app .property-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .editor-app .snap-setting { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 12px; color: #687890; }
 .editor-app .toast:before { content: 'i'; color: #4d67d9; }
+.tool-zoom .zoom-input { width: 43px; min-width: 0; border: 0; text-align: center; color: #5a6880; font-size: 11px; }

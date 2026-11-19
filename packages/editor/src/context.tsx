@@ -1,7 +1,7 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 import type { DiagramCommand, DiagramStore } from '@diagramai/diagram-core';
 
-export const EngineContext = createContext<{ store: DiagramStore; onError: (message: string) => void } | null>(null);
+export const EngineContext = createContext<{ store: DiagramStore; onError: (message: string) => void; insertionEdgeId?: string; routingExcludedNodeIds?: string[] } | null>(null);
 export function useEngine() {
   const context = useContext(EngineContext);
   if (!context) throw new Error('Missing editor engine context');

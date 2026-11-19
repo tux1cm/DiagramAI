@@ -103,20 +103,22 @@ export class DiagramStore {
     this.interactionCommands = commands; // Final geometry is serialized on commit below.
     this.publish({ ...this.state, document: freezeDocument(after), revision: this.state.revision + 1 });
   }
-  finishInteraction() {
+  finishInteraction(inputs: readonly unknown[] = [], label?: string) {
     const interaction = this.state.interaction;
     if (!interaction) return;
-    if (content(interaction.before) === content(this.state.document)) { this.publish({ ...this.state, interaction: null }); return; }
-    const after = structuredClone(this.state.document);
+    // Validate the final graph edit against the live draft before publishing.
+    // A drag + edge split is one transaction whose before is the pointer-down graph.
+    const after = applyCommands(this.state.document, inputs);
+    if (content(interaction.before) === content(after)) { this.publish({ ...this.state, interaction: null }); return; }
     after.metadata.updatedAt = new Date().toISOString();
     const frozen = freezeDocument(after);
     // Record all changed geometry, including group members, rather than just the last pointer event.
-    const values = after.nodes.filter((node) => {
+    const values = this.state.document.nodes.filter((node) => {
       const before = interaction.before.nodes.find((item) => item.id === node.id);
       return before && (before.x !== node.x || before.y !== node.y || before.width !== node.width || before.height !== node.height);
     }).map(({ id, x, y, width, height }) => ({ id, x, y, width, height }));
-    const commands: DiagramCommand[] = values.length ? [{ type: 'geometry', values }] : this.interactionCommands;
-    const transaction: Transaction = { operationId: newId(), label: interaction.label, baseRevision: interaction.baseRevision, commands, before: interaction.before, after: frozen, timestamp: after.metadata.updatedAt };
+    const commands: DiagramCommand[] = [...(values.length ? [{ type: 'geometry' as const, values }] : this.interactionCommands), ...inputs.map((input) => CommandSchema.parse(input))];
+    const transaction: Transaction = { operationId: newId(), label: label ?? interaction.label, baseRevision: interaction.baseRevision, commands, before: interaction.before, after: frozen, timestamp: after.metadata.updatedAt };
     this.interactionCommands = [];
     this.publish({ ...this.state, document: frozen, past: [...this.state.past.slice(-199), transaction], future: [], interaction: null, revision: this.state.revision + 1 });
   }

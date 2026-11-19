@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { connectHandles, dragBy, nodeModel, shortcut } from '../helpers/drawing';
+import { insertionFixture, paletteToPoint, pathPoint } from '../helpers/insertion';
 
 test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -62,5 +63,15 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   }, response.url());
   expect(probe).toEqual({ status: 200, body: { status: 'ok', apiVersion: 'v1', database: 'ok' } });
   await page.screenshot({ path: testInfo.outputPath('pages-neon-health.png') });
+  await page.getByRole('link', { name: '← Về trình vẽ' }).click();
+  const { host, edge, edgeId } = await insertionFixture(page);
+  const point = await pathPoint(edge.locator('.react-flow__edge-path'));
+  await paletteToPoint(page, 'diamond', point, true);
+  await expect(host).toHaveAttribute('data-insert-edge', edgeId);
+  await page.mouse.up();
+  await expect(page.locator('[data-edge]')).toHaveCount(2); await expect(page.locator('[data-node]')).toHaveCount(3);
+  await page.screenshot({ path: testInfo.outputPath('pages-p3-insertion.png') });
+  await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
+  await expect(page.locator(`[data-edge="${edgeId}"]`)).toHaveCount(1);
   expect(errors).toEqual([]);
 });

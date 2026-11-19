@@ -1,6 +1,6 @@
 # DiagramAI
 
-Engine vẽ P2 đã đạt kiểm thử Web/Desktop, CI/Pages và live, chờ chủ dự án nghiệm thu — **chưa phải editor sản phẩm v1.0**. P0/P1 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p2-status.md`](docs/p2-status.md); lịch sử: [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
+P2 đã được chủ dự án xác nhận OK; P3 Smart Connector đạt kiểm thử local Web/Desktop, chờ CI/deploy và nghiệm thu — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p3-status.md`](docs/p3-status.md); lịch sử: [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Tab Thuộc tính chỉnh style/kích thước; hỗ trợ đa chọn, clipboard, nhóm/căn chỉnh và Undo/Redo. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload/đóng app**. Chèn hình lên cạnh thông minh thuộc P3; file/lưu/xuất ảnh thuộc P4. Không dùng bản này lưu công việc thật.
+Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Kéo hình rời lên cạnh sáng tím để chèn A→C→B, một Ctrl+Z hoàn tác cả lần chèn. Có snap tâm/cạnh và guideline; nhấp đúp % zoom để nhập mức chính xác. Tab Thuộc tính chỉnh style/kích thước; hỗ trợ đa chọn, clipboard, nhóm/căn chỉnh và Undo/Redo. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload/đóng app**. File/lưu/xuất ảnh thuộc P4. Không dùng bản này lưu công việc thật.
 
 Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn đoán React Flow/Neon từ P0. Probe API thành công không phải đồng bộ sơ đồ. Mockup gốc chỉ phục vụ đối chiếu ở `/reference/DiagramAI_Mockup.html`.
 

@@ -1,5 +1,7 @@
 # P2 — Domain model và engine vẽ
 
+Chủ dự án đã xác nhận **P2 OK** sau kiểm tra các sửa connector, rồi yêu cầu P3. Báo cáo này giữ bằng chứng lịch sử; tiến độ mới ở [`p3-status.md`](p3-status.md).
+
 Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live; chờ chủ dự án nghiệm thu. Chưa bắt đầu P3/P4.**
 
 ## Phần triển khai

@@ -62,7 +62,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
         <button onClick={() => void probe()} disabled={!apiBaseUrl || busy}>Kiểm tra API</button>
         <p role="status">{health}</p>
       </section>
-      <p>Engine P2 chỉnh sửa được trong bộ nhớ. AI, đồng bộ, lưu local và file production chưa triển khai; đi lại giữa trang kiểm tra và canvas không làm mất sơ đồ đang mở.</p>
+      <p>Engine P3 chỉnh sửa và chèn hình vào cạnh trong bộ nhớ. AI, đồng bộ, lưu local và file production chưa triển khai; đi lại giữa trang kiểm tra và canvas không làm mất sơ đồ đang mở.</p>
     </main>
   );
 }

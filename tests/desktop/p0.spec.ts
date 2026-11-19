@@ -5,6 +5,7 @@ import { mkdtempSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { captureReferenceView, compareReferenceViews } from '../helpers/visual-reference';
 import { blockSystemClipboard, connectHandles, dragBy, nodeButton, nodeModel, shortcut } from '../helpers/drawing';
+import { insertionFixture, paletteToPoint, pathPoint } from '../helpers/insertion';
 
 test('installed Tauri app renders WebView2, resizes, minimizes, restores and navigates', async ({ playwright }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows/WebView2 only');
@@ -123,6 +124,25 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await page.getByRole('link', { name: '← Về trình vẽ' }).click();
     await expect(page.locator('.shape-tile')).toHaveCount(21);
+    const { host, edge, edgeId } = await insertionFixture(page);
+    const point = await pathPoint(edge.locator('.react-flow__edge-path'));
+    await paletteToPoint(page, 'diamond', point, true);
+    await expect(host).toHaveAttribute('data-insert-edge', edgeId);
+    await page.screenshot({ path: testInfo.outputPath('webview2-p3-preview.png') });
+    await page.mouse.up();
+    await expect(page.locator('[data-node]')).toHaveCount(3); await expect(page.locator('[data-edge]')).toHaveCount(2);
+    await page.screenshot({ path: testInfo.outputPath('webview2-p3-insert.png') });
+    await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
+    await expect(page.locator(`[data-edge="${edgeId}"]`)).toHaveCount(1);
+    await shortcut(page, 'Control+y'); await expect(page.locator('[data-edge]')).toHaveCount(2);
+    await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
+    await page.locator('.shape-tile[data-shape=diamond]').dragTo(host, { targetPosition: { x: 420, y: 320 } });
+    const isolated = page.locator('[data-node][data-type=diamond]'), isolatedX = await isolated.getAttribute('data-x');
+    const isolatedBox = (await isolated.boundingBox())!, destination = await pathPoint(page.locator(`[data-edge="${edgeId}"] .react-flow__edge-path`));
+    await dragBy(page, isolated, destination.x - isolatedBox.x - isolatedBox.width / 2, destination.y - isolatedBox.y - isolatedBox.height / 2);
+    await expect(page.locator('[data-edge]')).toHaveCount(2);
+    await shortcut(page, 'Control+z'); await expect(isolated).toHaveAttribute('data-x', isolatedX!);
+    await expect(page.locator(`[data-edge="${edgeId}"]`)).toHaveCount(1);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();

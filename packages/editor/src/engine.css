@@ -13,3 +13,7 @@
 .engine-host .react-flow__nodesselection-rect { border: 1px dashed #546df4; background: rgba(72,103,244,.03); }
 .engine-host.tool-text .react-flow__pane { cursor: text; }
 .engine-host .react-flow__resize-control.handle { background: #fff; border: 1.5px solid #546df4; }
+.engine-host .snap-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; overflow: hidden; }
+.engine-host .snap-overlay line { stroke: #a879ef; stroke-width: 1; stroke-dasharray: 4 3; }
+.engine-host .insertion-point { fill: #fff; stroke: #7056ec; stroke-width: 3; }
+.engine-host .insertion-hint { position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%); z-index: 16; pointer-events: none; padding: 8px 12px; border: 1px solid #d7ccff; border-radius: 8px; background: #f6f2ff; color: #624cc5; font-size: 12px; white-space: nowrap; }

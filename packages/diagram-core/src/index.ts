@@ -5,3 +5,6 @@ export * from './store';
 export * from './clipboard';
 export * from './operations';
 export * from './migration';
+export * from './insertion';
+export * from './snapping';
+export * from './routing';

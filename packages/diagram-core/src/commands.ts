@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DocumentSchema, EdgeSchema, EdgeStyleSchema, GroupSchema, IdSchema, NodeSchema, NodeStyleSchema, type DiagramDocument } from './schema';
+import { PORTS } from './registry';
 
 const nodePatch = z.object({ text: z.string().max(4000).optional(), style: NodeStyleSchema.partial().optional(), zIndex: z.number().int().min(-10000).max(10000).optional() }).strict();
 const edgePatch = EdgeSchema.omit({ id: true, style: true }).partial().extend({ style: EdgeStyleSchema.partial().optional() }).strict();
@@ -13,6 +14,10 @@ export const CommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('rename'), title: z.string().trim().min(1).max(100) }).strict(),
   z.object({ type: z.literal('group'), group: GroupSchema }).strict(),
   z.object({ type: z.literal('ungroup'), groupIds: z.array(IdSchema).max(250) }).strict(),
+  z.object({ type: z.literal('insert_node_on_edge'), edgeId: IdSchema, nodeData: NodeSchema,
+    position: z.object({ x: z.number().finite(), y: z.number().finite() }).strict(),
+    entry: z.enum(PORTS), exit: z.enum(PORTS), edgeIds: z.tuple([IdSchema, IdSchema]),
+  }).strict(),
 ]);
 export type DiagramCommand = z.infer<typeof CommandSchema>;
 export type NodePatch = z.infer<typeof nodePatch>;
@@ -64,6 +69,25 @@ export function applyCommands(document: DiagramDocument, inputs: readonly unknow
         requireIds(command.groupIds, 'groups');
         draft.groups = draft.groups.filter((group) => !command.groupIds.includes(group.id));
         break;
+      case 'insert_node_on_edge': {
+        requireIds([command.edgeId], 'edges');
+        const edge = draft.edges.find((item) => item.id === command.edgeId)!;
+        const node = draft.nodes.find((item) => item.id === command.nodeData.id);
+        if (edge.source === command.nodeData.id || edge.target === command.nodeData.id || command.entry === command.exit) throw new Error('Không thể chèn vào chính đầu nối');
+        if (node && (draft.edges.some((item) => item.source === node.id || item.target === node.id) || draft.groups.some((group) => group.nodeIds.includes(node.id)))) throw new Error('Chỉ tự chèn hình rời, không có cạnh hoặc nhóm');
+        if (node && JSON.stringify(NodeSchema.parse(node)) !== JSON.stringify(command.nodeData)) throw new Error('Hình đã thay đổi trước khi chèn');
+        const known = new Set([draft.documentId, ...draft.nodes.map((item) => item.id), ...draft.edges.map((item) => item.id), ...draft.groups.map((item) => item.id)]);
+        if (command.edgeIds[0] === command.edgeIds[1] || command.edgeIds.some((id) => known.has(id) || id === command.nodeData.id)) throw new Error('ID cạnh mới bị trùng');
+        const inserted = { ...command.nodeData, ...command.position };
+        if (node) draft.nodes = draft.nodes.map((item) => item.id === node.id ? inserted : item);
+        else draft.nodes.push(inserted);
+        draft.edges = draft.edges.filter((item) => item.id !== edge.id);
+        draft.edges.push(
+          { ...edge, id: command.edgeIds[0], target: inserted.id, targetHandle: command.entry },
+          { ...edge, id: command.edgeIds[1], source: inserted.id, sourceHandle: command.exit, label: '' },
+        );
+        break;
+      }
     }
   }
   return DocumentSchema.parse(draft); // Reject the entire transaction, never partial graph changes.

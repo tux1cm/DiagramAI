@@ -85,7 +85,7 @@ export function EditorShell({ store }: { store: DiagramStore }) {
     return () => window.removeEventListener('keydown', keydown);
   }, [store, execute, duplicate, remove, group, ungroup, onError]);
   const hasSelection = Boolean(state.selection.nodeIds.length || state.selection.edgeIds.length);
-  return <div id="app" className="editor-app" data-phase="p2">
+  return <div id="app" className="editor-app" data-phase="p3">
     <Topbar title={document.title} dirty={state.dirty} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={setDialog}/>
     <section className="workarea">
       <aside className="rail" aria-label="Công cụ">
@@ -94,7 +94,7 @@ export function EditorShell({ store }: { store: DiagramStore }) {
         <button className={`railbtn ${tool === 'pan' ? 'active' : ''}`} title="Di chuyển canvas" onClick={() => setTool('pan')}><Icon name="hand" size="lg"/></button>
         <button className={`railbtn ${tool === 'link' ? 'active' : ''}`} title="Tạo đường nối" onClick={() => setTool('link')}><Icon name="link" size="lg"/></button>
         <button className="railbtn" title="Trợ lý AI" aria-expanded={!inspectorCollapsed} onClick={() => { setInspectorCollapsed(!inspectorCollapsed); setTab('ai'); }}><Icon name="sparkle" size="lg"/></button>
-        <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P2" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
+        <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P3" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
       </aside>
       <Palette collapsed={paletteCollapsed} addShape={addShape}/>
       <main className="canvas-column"><Toolbar zoom={zoom} tool={tool} setTool={setTool} changeZoom={(value) => canvas.current?.zoomTo(value)} fit={() => canvas.current?.fit()} undo={() => store.undo()} redo={() => store.redo()} canUndo={Boolean(state.past.length || state.interaction)} canRedo={Boolean(state.future.length)} duplicate={duplicate} remove={remove} hasSelection={hasSelection}/>
@@ -102,12 +102,12 @@ export function EditorShell({ store }: { store: DiagramStore }) {
       </main>
       <Inspector document={document} selection={state.selection} activeTab={tab} setTab={setTab} collapsed={inspectorCollapsed} nodePatch={nodePatch} edgePatch={edgePatch} geometry={geometry} arrange={arrange} group={group} ungroup={ungroup} duplicate={duplicate} remove={remove} snap={snap} setSnap={setSnap}/>
       {notice && <div className="toast-stack" role="status"><div className="toast">{notice}</div></div>}
-      {dialog && <Modal title={{ help: 'DiagramAI · Engine P2', cloud: 'Đồng bộ chưa được bật', files: 'File và xuất ảnh · P4' }[dialog]} close={close}>
-        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Chọn hình để resize hoặc chỉnh kích thước ở Thuộc tính. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan. Lưới 10px có thể tắt ở Thuộc tính.</p><p>Chưa lưu local/file (P4), chưa chèn hình vào cạnh thông minh (P3), chưa sync/AI (P5/P6). Không đóng/refresh nếu muốn giữ nội dung phiên này.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
+      {dialog && <Modal title={{ help: 'DiagramAI · Smart Connector P3', cloud: 'Đồng bộ chưa được bật', files: 'File và xuất ảnh · P4' }[dialog]} close={close}>
+        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Chọn hình để resize hoặc chỉnh kích thước ở Thuộc tính. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Không tự chèn hình đã có cạnh/nhóm hoặc tại nhiều đường chồng nhau. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan. Lưới/guideline có thể tắt ở Thuộc tính. Nhấp đúp phần trăm zoom để nhập mức chính xác.</p><p>Chưa lưu local/file (P4), chưa sync/AI (P5/P6). Không đóng/refresh nếu muốn giữ nội dung phiên này.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
         {dialog === 'cloud' && <><p>Chưa có đồng bộ dự án. Thay đổi hiện chỉ nằm trong bộ nhớ và mất khi tải lại. Đồng bộ Desktop ↔ Web thuộc P5; không có tài khoản hay token dự án được tạo.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
         {dialog === 'files' && <p>Tạo/quản lý nhiều sơ đồ, mở/lưu .diagramai và xuất SVG/PNG/PDF sẽ triển khai ở P4. Ctrl+S hiện chỉ mở thông báo này, không giả báo đã lưu hoặc tự tải file.</p>}
       </Modal>}
     </section>
-    <footer className="footer"><span>DiagramAI · <b>P2 engine vẽ</b> · Chưa lưu dữ liệu · <a href="#/spike">Kiểm tra nền tảng</a></span><span><span className="hide-small">{state.selection.nodeIds.length + state.selection.edgeIds.length} đang chọn &nbsp;·&nbsp; </span><b>{document.nodes.length} hình · {document.edges.length} đường nối</b> &nbsp;·&nbsp; <span>{Math.round(zoom * 100)}%</span></span></footer>
+    <footer className="footer"><span>DiagramAI · <b>P3 smart connector</b> · Chưa lưu dữ liệu · <a href="#/spike">Kiểm tra nền tảng</a></span><span><span className="hide-small">{state.selection.nodeIds.length + state.selection.edgeIds.length} đang chọn &nbsp;·&nbsp; </span><b>{document.nodes.length} hình · {document.edges.length} đường nối</b> &nbsp;·&nbsp; <span>{Math.round(zoom * 100)}%</span></span></footer>
   </div>;
 }
