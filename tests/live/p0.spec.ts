@@ -5,6 +5,11 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
+  const faviconUrl = await page.locator('link[rel="icon"]').evaluate((element) => (element as HTMLLinkElement).href);
+  expect(faviconUrl).toBe(new URL('favicon.svg', page.url()).href);
+  const favicon = await page.request.get(faviconUrl);
+  expect(favicon.ok()).toBe(true);
+  expect(favicon.headers()['content-type']).toContain('image/svg+xml');
   await expect(page.locator('iframe')).toHaveCount(0);
   await expect(page.locator('.shape-tile')).toHaveCount(21);
   await expect(page.locator('[data-node]')).toHaveCount(6);
