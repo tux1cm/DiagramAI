@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 // Repository explicitly confirmed by the owner. No generic account-wide operations.
 const repository = 'tux1cm/DiagramAI';
 const mode = process.argv[2] ?? 'status';
-if (!['status', 'setup', 'dispatch', 'jobs'].includes(mode)) throw new Error('Use status, setup, dispatch or jobs');
+if (!['status', 'setup', 'dispatch', 'jobs', 'wait'].includes(mode)) throw new Error('Use status, setup, dispatch, jobs or wait <run-id> ...');
 const credential = spawnSync('git', ['-c', 'credential.interactive=false', 'credential', 'fill'], {
   input: 'protocol=https\nhost=github.com\npath=tux1cm/DiagramAI.git\n\n',
   encoding: 'utf8',
@@ -43,7 +43,29 @@ if (mode === 'setup') {
 if (mode === 'dispatch') {
   const response = await api('/actions/workflows/deploy-pages.yml/dispatches', 'POST', { ref: 'main' });
   if (response.status !== 204) throw new Error(`Dispatch failed: HTTP ${response.status}`);
-  console.log('Requested P0 Pages deployment on main. Check status; dispatch is not proof of success.');
+  console.log('Requested Pages deployment on main. Check status; dispatch is not proof of success.');
+}
+if (mode === 'wait') {
+  const ids = process.argv.slice(3);
+  if (!ids.length || ids.length > 5 || ids.some((id) => !/^\d+$/.test(id))) throw new Error('Provide 1-5 exact Actions run IDs');
+  const pending = new Set(ids);
+  const states = new Map();
+  const deadline = Date.now() + 15 * 60 * 1000;
+  while (pending.size) {
+    if (Date.now() > deadline) throw new Error('Timed out waiting for the selected Actions runs');
+    for (const id of pending) {
+      const run = await api(`/actions/runs/${id}`);
+      if (run.status !== 200) throw new Error(`Run ${id} not found`);
+      const state = `${run.data.status}/${run.data.conclusion ?? '-'}`;
+      if (states.get(id) !== state) { console.log(`${id} ${run.data.name}: ${state}`); states.set(id, state); }
+      if (run.data.status === 'completed') {
+        if (run.data.conclusion !== 'success') throw new Error(`Actions failed: https://github.com/${repository}/actions/runs/${id}`);
+        pending.delete(id);
+      }
+    }
+    if (pending.size) await new Promise((resolve) => setTimeout(resolve, 10000));
+  }
+  console.log('Selected Actions runs completed successfully.');
 }
 const pages = await api('/pages');
 console.log(JSON.stringify({ repository, pages: pages.status === 404 ? 'not-enabled' : { url: pages.data.html_url, status: pages.data.status, buildType: pages.data.build_type } }, null, 2));

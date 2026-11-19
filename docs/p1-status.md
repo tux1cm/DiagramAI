@@ -1,6 +1,6 @@
 # P1 — Chuyển giao diện mockup sang React
 
-Ngày: 2026-11-19. P0 đã được chủ dự án xác nhận PASS. **P1 đang kiểm thử — chưa bắt đầu P2.**
+Ngày: 2026-11-19. P0 đã được chủ dự án xác nhận PASS. **P1 — PASS kiểm thử kỹ thuật Web/Desktop/visual/live; chờ chủ dự án review trước P2.** Chưa triển khai engine hoặc lưu dữ liệu production.
 
 ## Phạm vi và hiện thực
 
@@ -23,9 +23,9 @@ Ngày: 2026-11-19. P0 đã được chủ dự án xác nhận PASS. **P1 đang 
 | Bám layout/màu/shape mockup | Đạt Web local: geometry sai lệch ≤1px, pixel comparison 3 viewport đạt (chi tiết masks bên dưới) |
 | Tab Thuộc tính và tô màu | Đạt E2E: chọn n2 → xanh, n1 không đổi; chọn edge hiển thị nhãn readonly; reload reset |
 | Không login, không fake saved/cloud | Đạt E2E; state P1 rõ trên topbar/footer |
-| Search/collapse/zoom/keyboard/modal | Đạt E2E: cả test viewport 900 overlay sidebar và focus trap |
+| Search/collapse/zoom/keyboard/modal | PASS E2E: cả test viewport 900 overlay sidebar và focus trap |
 | Desktop/WebView2 | Đạt full build, NSIS cài/gỡ cách ly, chọn/tô màu, 3 viewport/minimize/restore/navigation/live health và pixel comparison |
-| GitHub CI/Pages/live | Chưa deploy P1; Web public còn P0 cho tới khi kiểm thử local đạt |
+| GitHub CI/Pages/live | PASS: P1 commit `b692203` đã deploy; CI và Pages workflow SUCCESS, 3 live tests đạt với chọn/tô màu/reset + Neon health/CORS |
 
 ## Các lệnh đã chạy
 
@@ -35,6 +35,9 @@ Ngày: 2026-11-19. P0 đã được chủ dự án xác nhận PASS. **P1 đang 
 - Chạy bộ mở rộng với `VITE_BASE_PATH=/p0-subpath/`: **30/30 PASS**, gồm viewport 900 overlay sidebar/focus trap và 3 visual comparison; root-base đã đạt ở lượt trước.
 - `build.bat --no-pause`: PASS toàn bộ npm ci/check/Web + Tauri NSIS + collect. Bản trước archive nguyên vẹn.
 - `npm run test:desktop`: PASS, installer=0/test=0/uninstaller=0; thực sự chạy WebView2, có chọn/tô màu và gọi Neon health; không dùng Chromium thường thay cho native test.
+- `npm run test:live`: **3/3 PASS** trên https://tux1cm.github.io/DiagramAI/ ở cả 3 viewport, không iframe/login; thử màu, reload reset, hash route và Neon/PostgreSQL với browser preflight.
+- GitHub CI: SUCCESS — https://github.com/tux1cm/DiagramAI/actions/runs/44428585436 (lint/type/unit + E2E/visual trên Chromium Linux).
+- GitHub Pages: SUCCESS — https://github.com/tux1cm/DiagramAI/actions/runs/44428585118.
 - Lượt E2E đầu bắt lỗi accessible name nút zoom (`+`/`−` chỉ có title); đã sửa bằng `aria-label`, không nới test để bỏ lỗi.
 - `npm audit --omit=dev` và `npm audit`: **0 advisories theo registry ngày 19/11/2026**. Báo cáo P0 ngày 18/11 vẫn là lịch sử, không tự tuyên bố advisory cũ đã được khắc phục bằng thay đổi code.
 
@@ -48,7 +51,7 @@ Kết quả Web local ban đầu: **0 pixel mismatch ở phần không mask** t�
 
 WebView2: **316 pixel mismatch** cho mỗi viewport (0.0301% / 0.0152% / 0.0343%, dưới ngưỡng 0.3%). Đã xem diff: tập trung logo stroke, chữ AI và palette-header icon. Metrics computed-style xác nhận trang reference tĩnh dưới Tauri CSP không áp dụng 3 inline style này (1.85px/ink/ink), còn React đúng thiết kế (2.2px/#596bf1/#a1adbf). Không sửa reference, không nới CSP hoặc mask thêm các vùng đó để ép số 0; test còn assert token của React đúng theo thiết kế.
 
-Ảnh/metrics/diff tự động ở `test-results/web/`, WebView2 ở `test-results/desktop/`; ảnh nghiệm thu 3 viewport Web/native, metrics và diff native đã lưu `docs/evidence/p1/`, gồm `webview2-properties.png` chứng minh selection/tô màu.
+Ảnh/metrics/diff tự động ở `test-results/web/`, WebView2 ở `test-results/desktop/`; ảnh nghiệm thu 3 viewport Web/native, metrics và diff native đã lưu `docs/evidence/p1/`, gồm `webview2-properties.png` chứng minh selection/tô màu. Bằng chứng site thật: `pages-live-1366.png`, `pages-live-properties.png`, `pages-live-health.png`.
 
 ## Artifact Windows hiện tại
 
@@ -65,3 +68,13 @@ WebView2: **316 pixel mismatch** cho mỗi viewport (0.0301% / 0.0152% / 0.0343%
 - P5/P6: đồng bộ capability/recovery/conflict và AI thật có proposal/preview/quota guard.
 
 Không coi thao tác thay màu bản mẫu hoặc probe health là persistence, cloud sync hay AI production.
+
+## Test nhanh cho chủ dự án
+
+1. Web https://tux1cm.github.io/DiagramAI/ (Ctrl+F5 nếu còn thấy P0), hoặc EXE trực tiếp ở đường dẫn trên, không bắt buộc chạy Setup.
+2. Chọn hình **Tiếp nhận vật tư** → tab **Thuộc tính** → chọn màu: chỉ hình đó đổi màu, topbar vẫn báo chưa lưu. Reload sẽ trở về mẫu ban đầu.
+3. Tìm `Hình thoi`, thử nút Hình khối để thu gọn/mở palette, zoom +/- và Vừa màn hình.
+4. Bấm Mở/Lưu/Xuất hoặc thử thêm shape: phải thấy giải thích phase, không tải file hay báo thành công giả. AI input không gửi request.
+5. Link **Kiểm tra nền tảng** ở footer → Kiểm tra API: Neon/PostgreSQL OK; quay lại trình vẽ không cần login.
+
+Không có blocking issue trong phạm vi P1 đã test. Sai khác native đã định lượng và giải thích ở trên; hạn chế engine/persistence là phạm vi các phase sau, không phải tính năng P1 đã hoàn thiện. Chưa tự chuyển sang P2.

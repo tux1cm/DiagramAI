@@ -1,6 +1,6 @@
 # DiagramAI
 
-Giao diện React P1, dùng chung Web/Desktop — **chưa phải editor sản phẩm v1.0**. P0 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Báo cáo P1: [`docs/p1-status.md`](docs/p1-status.md); bằng chứng nền tảng trước đó: [`docs/p0-status.md`](docs/p0-status.md).
+Giao diện React P1 đã đạt kiểm thử kỹ thuật, dùng chung Web/Desktop — **chưa phải editor sản phẩm v1.0**. P0 đã được chủ dự án xác nhận PASS; P1 chờ review trước P2. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Báo cáo P1: [`docs/p1-status.md`](docs/p1-status.md); bằng chứng nền tảng trước đó: [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
