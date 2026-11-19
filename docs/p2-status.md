@@ -52,7 +52,7 @@ Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt
 ## Artifact local
 
 - Chạy nhanh không setup: `apps/desktop/src-tauri/target/release/diagramai.exe`.
-- Bộ cài: `File/Desktop_Light/DiagramAI_Setup_x64.exe`, **2,056,521 bytes**, SHA-256 `1180c569dc0df7b79f164f4a459fdffffd23d37c80f56c2c6b9dd7b8854b8e97`.
+- Bộ cài sau sửa connector: `File/Desktop_Light/DiagramAI_Setup_x64.exe`, **2,058,305 bytes**, SHA-256 `778940edf549a7d666c527ed34e625294ab155b3b05a421555d0f83266ff6b51`.
 - Manifest: `File/Desktop_Light/release-manifest.json`; static Web: `File/Web/`.
 - Build còn warning chunk JS 561 kB, ESLint 9 hết hỗ trợ và identifier thử nghiệm `.app`; không che warning, không tự nâng stack/đổi identifier phát hành trong P2.
 
@@ -73,3 +73,4 @@ Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt
 - Giữ nguyên ID, endpoint/port, nhãn, màu khi đổi preset. Undo/Redo khôi phục kiểu/markers; Thuộc tính → Kiểu đường → Cong để đổi lại.
 - Unit router: 16 tổ hợp hướng neo + normalization float. Kiểm tra thêm E2E neo trái hình thoi → neo trái Nhập kho, preview cong, đổi preset/Undo/Redo.
 - Lượt sửa này: `npm run check` **92/92 unit PASS**, full E2E subpath **60/60 PASS** trên 3 viewport, visual mismatch vẫn **30/0/22 pixels**; không sửa reference hoặc thêm mask.
+- Commit sửa `c8cd93f`: [CI 44468826593](https://github.com/tux1cm/DiagramAI/actions/runs/44468826593) và [Pages 44468838095](https://github.com/tux1cm/DiagramAI/actions/runs/44468838095) **SUCCESS**. Live **3/3 PASS**, có tạo cạnh cong/đổi preset Mũi tên/Undo trên site thật. `build.bat --no-pause` và test bản cài Desktop mới cũng **PASS**, gồm cùng thao tác đổi kiểu cạnh.

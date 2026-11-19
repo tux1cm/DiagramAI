@@ -9,5 +9,6 @@ Ngày kiểm tra: 2026-11-19. Báo cáo và giới hạn: [`../../p2-status.md`]
 - `webview2-*.png`, `webview2-*-metrics.json`: bản cài Desktop thật, 3 viewport sau khi fit camera; inline label/properties và Neon health có ảnh riêng.
 - `build.txt`, `release-manifest.json`: log build thành công và hash bộ cài local; không đưa EXE hoặc credentials vào Git.
 - `live-*-pages-p2.png`, `live-*-pages-properties.png`, `live-*-pages-neon-health.png`: site Pages thật sau deployment commit `de6a3eb`, cả 3 viewport, gồm probe PostgreSQL/CORS.
+- `diamond-port-routing.png`: phản hồi sau P2 — cạnh nối neo trái hình thoi sang neo trái Nhập kho đi vòng ngoài, không luồn vào hình. Test kiểm tra cả preview cong, đổi preset trên cùng cạnh và Undo/Redo.
 
 Ảnh là bằng chứng giao diện, không tự chứng minh lưu file, AI hoặc sync. Trạng thái chưa lưu được giữ rõ; file/persistence thuộc P4.
