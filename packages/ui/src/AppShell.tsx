@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Background, ReactFlow } from '@xyflow/react';
 import { checkHealth } from '@diagramai/shared';
 import '@xyflow/react/dist/style.css';
+import { EditorShell } from './editor/EditorShell';
 
 const nodes = [
   { id: 'p0-a', position: { x: 0, y: 0 }, data: { label: 'React Flow v12' } },
@@ -9,7 +10,7 @@ const nodes = [
 ];
 const edges = [{ id: 'p0-ab', source: 'p0-a', target: 'p0-b' }];
 
-export function P0Shell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl: string }) {
+export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl: string }) {
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -30,21 +31,13 @@ export function P0Shell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return (
-    <main className="reference-shell">
-      <iframe
-        title="Giao diện tham chiếu DiagramAI — chưa phải editor sản phẩm"
-        src={`${basePath}reference/DiagramAI_Mockup.html`}
-        sandbox="allow-scripts allow-downloads allow-modals"
-      />
-      <a className="p0-badge" href="#/spike">P0 · Tham chiếu / Kiểm tra nền tảng</a>
-    </main>
-  );
+  if (route !== '#/spike') return <EditorShell/>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>
       <p>Shell React dùng chung Web/Tauri. Đây là spike công nghệ, chưa phải editor sản phẩm.</p>
-      <a href="#/">← Về giao diện tham chiếu</a>
+      <a href="#/">← Về trình vẽ</a>
+      <p><a href={`${basePath}reference/DiagramAI_Mockup.html`}>Mockup gốc để đối chiếu</a></p>
       <section>
         <h2>React Flow v12</h2>
         <p>Hai node và một cạnh để kiểm tra thư viện tải được; không lưu dữ liệu.</p>
@@ -61,7 +54,7 @@ export function P0Shell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl
         <button onClick={() => void probe()} disabled={!apiBaseUrl || busy}>Kiểm tra API</button>
         <p role="status">{health}</p>
       </section>
-      <p>AI, đồng bộ, lưu local và file production chưa triển khai. Dữ liệu trong mockup là dữ liệu demo.</p>
+      <p>AI, đồng bộ, lưu local và file production chưa triển khai. Canvas P1 dùng dữ liệu mẫu trong bộ nhớ.</p>
     </main>
   );
 }

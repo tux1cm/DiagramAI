@@ -40,4 +40,8 @@ Unit test dùng database dependency giả chỉ chứng minh handler; ngoài ra 
 
 ## Quản lý thay đổi
 
+### Cập nhật P1 — 19/11/2026
+
+P0 đã được chủ dự án xác nhận PASS. Trang chính hiện dùng `AppShell` → `EditorShell` và các component React, không còn reference iframe. `packages/ui/src/editor/fixture.ts` là in-memory view-model để nghiệm thu layout/selection/tô màu, không phải domain schema production. CSS/icon/SVG port từ reference bất biến; có visual comparison Web và WebView2. Diagnostics `#/spike` và health backend được giữ nguyên. Xem `docs/p1-status.md` và ADR 0002; chưa triển khai P2/P4/P5/P6.
+
 P0 chỉ được PASS sau khi đủ Web thật + EXE thật + Neon/DB thật + review baseline. Nếu Neon beta không đạt yêu cầu, ghi blocker và xin quyết định; không tự chuyển sang Worker/backend khác. Chưa bắt đầu P1 khi P0 còn blocking.

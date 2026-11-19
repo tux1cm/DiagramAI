@@ -1,10 +1,23 @@
-:root { font-family: Inter, 'Segoe UI', Arial, sans-serif; color: #18233c; background: #f5f7fb; color-scheme: light; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-.reference-shell, .reference-shell iframe { display: block; width: 100%; height: 100dvh; border: 0; }
-.p0-badge { position: fixed; bottom: 30px; left: 12px; padding: 7px 12px; background: #18233c; color: #fff; border-radius: 8px; font-size: 11px; box-shadow: 0 2px 12px #18233c22; }
+@import './reference.css';
+#root { height: 100%; }
+.editor-app .status-dot.unsaved { background: #9ca7b8; }
+.editor-app .logo .ico { stroke-width: 2.2; }
+.editor-app .project-name .ico { color: #95a0b2; }
+.editor-app .panetitle .ico { color: #a1adbf; }
+.editor-app .is-collapsed { display: none; }
+.editor-app .shape-tile { font-weight: inherit; padding: 0; }
+.editor-app .no-shapes { color: #888; font-size: 11px; }
+.editor-app .toolbtn:disabled, .editor-app .railbtn:disabled { opacity: .55; cursor: not-allowed; }
+.editor-app .svg-node { cursor: pointer; }
+.editor-app .svg-node:focus-visible, .editor-app [data-edge]:focus-visible { outline: none; filter: drop-shadow(0 0 3px #4867f4); }
+.editor-app .send:disabled { opacity: .6; cursor: not-allowed; }
+.editor-app .property-note { font-size: 11px; }
+.editor-app .footer a, .editor-app .diagnostic-link { color: #61708f; }
+.editor-app .footer a { text-underline-offset: 2px; }
+.editor-app .floating-hint { max-width: calc(100% - 120px); }
+.editor-app input[readonly], .editor-app textarea[readonly] { background: #f8fafc; }
 a:focus-visible, button:focus-visible { outline: 3px solid #4867f4; outline-offset: 3px; }
-.spike-page { max-width: 900px; margin: 32px auto; padding: 0 24px; line-height: 1.6; }
+.spike-page { max-width: 900px; height: 100dvh; overflow: auto; margin: 0 auto; padding: 32px 24px; line-height: 1.6; }
 .spike-page section { margin: 24px 0; padding: 20px; border: 1px solid #e8edf4; border-radius: 12px; background: #fff; }
 .spike-page h1, .spike-page h2 { line-height: 1.25; }
 .spike-page a { color: #4867f4; }

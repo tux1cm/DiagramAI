@@ -1,16 +1,17 @@
 import { expect, test } from '@playwright/test';
 
-test('opens the reference without login and loads all 21 palette entries', async ({ page }, testInfo) => {
+test('opens the P1 React editor without an iframe or login', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
-  const reference = page.frameLocator('iframe');
-  await expect(reference.locator('.brandtext')).toHaveText('DiagramAI');
-  await expect(reference.locator('.shape-tile')).toHaveCount(21);
-  await expect(reference.locator('[data-node]')).toHaveCount(6);
-  await expect(reference.locator('[data-edge]')).toHaveCount(5);
-  await expect(page.getByRole('link', { name: 'P0 · Tham chiếu / Kiểm tra nền tảng' })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('p0-shell.png') });
+  await expect(page.locator('iframe')).toHaveCount(0);
+  await expect(page.locator('.brandtext')).toHaveText('DiagramAI');
+  await expect(page.locator('.shape-tile')).toHaveCount(21);
+  await expect(page.locator('[data-node]')).toHaveCount(6);
+  await expect(page.locator('[data-edge]')).toHaveCount(5);
+  await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('p1-shell.png') });
   expect(errors).toEqual([]);
 });
 
@@ -23,8 +24,8 @@ test('hash navigation and refresh keep the React Flow spike working', async ({ p
   await expect(page.getByRole('status')).toHaveText('Chưa kiểm tra');
   await page.reload();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
-  await page.getByRole('link', { name: '← Về giao diện tham chiếu' }).click();
-  await expect(page.frameLocator('iframe').locator('#canvasHost')).toBeVisible();
+  await page.getByRole('link', { name: '← Về trình vẽ' }).click();
+  await expect(page.locator('#canvasHost')).toBeVisible();
 });
 
 test('captures immutable mockup baseline', async ({ page }, testInfo) => {

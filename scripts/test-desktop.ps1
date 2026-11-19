@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $setup = Join-Path $root 'File/Desktop_Light/DiagramAI_Setup_x64.exe'
-if (!(Test-Path $setup)) { throw 'Build and collect the P0 installer first.' }
+if (!(Test-Path $setup)) { throw 'Build and collect the Windows UI installer first.' }
 # Never replace an existing user installation, even if it has the same version.
 foreach ($hive in @('HKCU:', 'HKLM:')) {
     if (Test-Path "$hive\Software\Microsoft\Windows\CurrentVersion\Uninstall\DiagramAI") {

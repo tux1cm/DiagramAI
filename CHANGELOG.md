@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.0 — 2026-11-19 — P1 React UI
+
+- Chuyển trang chính từ iframe reference sang shared React components; giữ CSS tokens/layout/icon/SVG geometry của mockup, không sửa reference.
+- View state thực trong bộ nhớ cho chọn hình/cạnh, màu preset, title, search/collapse/zoom; Thuộc tính lấy từ selection.
+- Trạng thái lưu/cloud/AI trung thực; engine controls chưa có bị disable, file/AI/shape actions nêu phase, không fake thành công hay gửi sơ đồ lên cloud.
+- Giữ diagnostics P0/Neon; thêm tab keyboard navigation và modal focus trap/Escape/focus restoration.
+- Thêm 11 unit tests cho P1 state/geometry/registry và E2E/visual comparison Web/WebView2; báo cáo `docs/p1-status.md`.
+- Bổ sung dev-only pixelmatch/pngjs; full audit ngày 19/11 trả 0 advisories, không force downgrade.
+
 ## 0.0.0 — 2026-11-18 — P0 technical spike PASS
 
 - Khởi tạo npm workspaces React/Vite/TypeScript, shared P0 shell và React Flow v12 smoke test.

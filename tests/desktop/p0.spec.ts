@@ -3,6 +3,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { captureReferenceView, compareReferenceViews } from '../helpers/visual-reference';
 
 test('installed Tauri app renders WebView2, resizes, minimizes, restores and navigates', async ({ playwright }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows/WebView2 only');
@@ -43,20 +44,32 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     const page = context.pages()[0];
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    const frame = page.frameLocator('iframe');
-    await expect(frame.locator('.shape-tile')).toHaveCount(21);
-    await expect(frame.locator('[data-node]')).toHaveCount(6);
+    await expect(page.locator('iframe')).toHaveCount(0);
+    await expect(page.locator('.shape-tile')).toHaveCount(21);
+    await expect(page.locator('[data-node]')).toHaveCount(6);
+    const editorUrl = page.url();
     for (const [width, height] of [[1366, 768], [1920, 1080], [1280, 720]]) {
       const size = window('resize', width, height);
       expect(size.width).toBe(width);
       expect(size.height).toBe(height);
       await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual([width, height]);
-      await expect(frame.locator('#canvasHost')).toBeVisible();
-      await page.screenshot({ path: testInfo.outputPath(`webview2-${width}x${height}.png`) });
+      await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
+      const current = await captureReferenceView(page, testInfo.outputPath(`webview2-${width}x${height}.png`));
+      await page.goto(new URL('reference/DiagramAI_Mockup.html', editorUrl).href);
+      await expect(page.locator('[data-node]')).toHaveCount(6);
+      const approved = await captureReferenceView(page, testInfo.outputPath(`reference-${width}x${height}.png`));
+      await compareReferenceViews(current, approved, testInfo, `webview2-${width}x${height}`);
+      await page.goto(editorUrl);
+      await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
     }
     expect(window('minimize').minimized).toBe(true);
     expect(window('restore').minimized).toBe(false);
-    await page.getByRole('link', { name: 'P0 · Tham chiếu / Kiểm tra nền tảng' }).click();
+    await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
+    await page.getByRole('button', { name: 'Hình mẫu Tiếp nhận vật tư', exact: true }).click();
+    await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
+    await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#e3f9ef');
+    await page.screenshot({ path: testInfo.outputPath('webview2-properties.png') });
+    await page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'DiagramAI · P0' })).toBeVisible();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await expect(page.locator('.react-flow__edge')).toHaveCount(1);
@@ -71,8 +84,8 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     }
     await page.reload();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
-    await page.getByRole('link', { name: '← Về giao diện tham chiếu' }).click();
-    await expect(frame.locator('.shape-tile')).toHaveCount(21);
+    await page.getByRole('link', { name: '← Về trình vẽ' }).click();
+    await expect(page.locator('.shape-tile')).toHaveCount(21);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();

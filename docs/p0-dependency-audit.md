@@ -7,3 +7,7 @@
 - Do not run `npm audit fix --force`: suggested major downgrades do not establish that this vulnerability is fixed and can break the selected toolchain.
 
 Mitigation for P0: keep dev/preview bound to loopback, accept only trusted source/config/glob inputs, do not expose build tooling as a public API, and do not treat a successful build as a clean security audit. Recheck upstream before release and upgrade/test as soon as an appropriate patched dependency is available. This remains an **open security item**, not a PASS.
+
+## Recheck — 2026-11-19 (P1)
+
+After adding dev-only pixelmatch/pngjs visual-test dependencies, both `npm audit --omit=dev` and full `npm audit` reported **0 vulnerabilities** with the registry/advisory data available on this date. No `audit fix --force` or major downgrade was run. This supersedes the current audit count, not the historical P0 observation; it does not prove the underlying advisory was fixed by our UI code or remove the requirement for release security review.

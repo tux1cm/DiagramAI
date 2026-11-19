@@ -1,13 +1,23 @@
 import { expect, test } from '@playwright/test';
 
-test('real Pages loads reference and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
+test('real Pages loads P1 React UI and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
-  await expect(page.frameLocator('iframe').locator('.shape-tile')).toHaveCount(21);
-  await expect(page.frameLocator('iframe').locator('[data-node]')).toHaveCount(6);
-  await page.screenshot({ path: testInfo.outputPath('pages-reference.png') });
-  await page.getByRole('link', { name: 'P0 · Tham chiếu / Kiểm tra nền tảng' }).click();
+  await expect(page.locator('iframe')).toHaveCount(0);
+  await expect(page.locator('.shape-tile')).toHaveCount(21);
+  await expect(page.locator('[data-node]')).toHaveCount(6);
+  await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
+  await page.screenshot({ path: testInfo.outputPath('pages-p1.png') });
+  await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
+  await page.getByRole('button', { name: 'Hình mẫu Tiếp nhận vật tư', exact: true }).click();
+  await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
+  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#e3f9ef');
+  await expect(page.locator('.top-status')).toHaveText('Bản thử · Chưa lưu');
+  await page.screenshot({ path: testInfo.outputPath('pages-properties.png') });
+  await page.reload();
+  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#ffffff');
+  await page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true }).click();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
   await expect(page.locator('.react-flow__edge')).toHaveCount(1);
   await page.reload();

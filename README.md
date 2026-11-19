@@ -1,6 +1,6 @@
 # DiagramAI
 
-P0 nền tảng Desktop/Web/Neon đã đạt smoke kỹ thuật — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web chạy thật: **https://tux1cm.github.io/DiagramAI/**. Bấm nhãn P0 → Kiểm tra API để kiểm chứng Neon/PostgreSQL, không phải đồng bộ sơ đồ. Báo cáo và giới hạn: [`docs/p0-status.md`](docs/p0-status.md).
+Giao diện React P1, dùng chung Web/Desktop — **chưa phải editor sản phẩm v1.0**. P0 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Báo cáo P1: [`docs/p1-status.md`](docs/p1-status.md); bằng chứng nền tảng trước đó: [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
@@ -11,7 +11,9 @@ npm ci
 npm run dev
 ```
 
-Mở http://127.0.0.1:5173. Mặc định vào **mockup tham chiếu**, không login. Bấm nhãn P0 hoặc mở `/#/spike` để kiểm tra React Flow và API. Mockup chạy trong iframe sandbox riêng; thao tác chỉ để thử giao diện, **không có lưu local sản phẩm**. Không dùng nó để lưu công việc thật.
+Mở http://127.0.0.1:5173. Mặc định vào **giao diện React thật, không iframe, không login**. Chọn một hình mẫu → tab Thuộc tính → thử màu; có tìm hình, thu gọn panel, đổi tên và zoom bản mẫu. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload**. Engine kéo/resize/sửa chữ và Undo/Redo thuộc P2/P3; file/lưu/xuất ảnh thuộc P4. Không dùng P1 lưu công việc thật.
+
+Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn đoán React Flow/Neon từ P0. Probe API thành công không phải đồng bộ sơ đồ. Mockup gốc chỉ phục vụ đối chiếu ở `/reference/DiagramAI_Mockup.html`.
 
 ```powershell
 npm run prepare:reference
@@ -42,9 +44,9 @@ npm run test:e2e
 Remove-Item Env:VITE_BASE_PATH
 ```
 
-Ảnh và trace test nằm trong `test-results/`, báo cáo ở `playwright-report/`. Ảnh reference được chụp từ mockup gốc, không phải thiết kế mới.
+Ảnh/metrics/pixel diff nằm trong `test-results/web/`, báo cáo ở `playwright-report/`. Test so sánh trực tiếp với mockup gốc tại cùng viewport; chỉ mask các vùng wording trạng thái/controls chưa có engine được liệt kê trong `docs/p1-status.md`, không mask canvas/palette/layout.
 
-## Desktop P0
+## Desktop P1
 
 Cần Rust stable **MSVC x64**, Visual Studio C++ Build Tools + Windows SDK và WebView2. Trên máy hiện tại, Rust/Cargo 1.100.0 đã được cài theo chấp thuận của chủ dự án. Mở terminal mới để nhận PATH Rustup (`%USERPROFILE%\.cargo\bin`).
 
@@ -56,9 +58,13 @@ npm run desktop:build
 
 `build.bat` kiểm tra môi trường và Vite server đang giữ dependency, dùng `npm ci`, kiểm tra mã, build NSIS/Web, copy vào `File/Desktop_Light` và `File/Web`, ghi `logs/build.log`. Không deploy, không migration, không ZIP. Output cũ được chuyển nguyên vẹn vào `File/Previous/<timestamp>/`, không xóa hay trộn file. Desktop dùng cùng build Web nhưng ép base `/`; bản Web dùng base đã cấu hình. Dùng `build.bat --no-pause` cho kiểm thử tự động.
 
-**Đã build và kiểm thử NSIS cài/gỡ, WebView2 render, resize/minimize/restore và hash route/reload**. Đây chỉ là P0 smoke, chưa nghiệm thu editor sản phẩm. Chạy lại bằng `npm run test:desktop`: dùng thư mục cài riêng, không tạo shortcut, từ chối ghi đè app người dùng đã cài, profile WebView2 riêng và debug loopback chỉ trong test. Bộ cài P0: `File/Desktop_Light/DiagramAI_Setup_x64.exe`. Identifier `local.diagramai.app` chỉ cho spike; identifier phát hành và metadata phải được duyệt sau. Icon P0 lấy từ logo mockup, nguồn tại `design/app-icon.svg`.
+**Đã build và kiểm thử NSIS cài/gỡ, WebView2 render, resize/minimize/restore và hash route/reload**. Đây là UI/smoke, chưa nghiệm thu editor sản phẩm. Chạy lại bằng `npm run test:desktop`: dùng thư mục cài riêng, không tạo shortcut, từ chối ghi đè app người dùng đã cài, profile WebView2 riêng và debug loopback chỉ trong test; P1 bổ sung chọn/tô màu và pixel comparison với reference.
 
-Full dependency audit còn cảnh báo dev-toolchain picomatch; xem `docs/p0-dependency-audit.md`. Build đạt không đồng nghĩa security audit sạch.
+- Bộ cài: `File/Desktop_Light/DiagramAI_Setup_x64.exe`.
+- Chạy thử **không cần setup**: `apps/desktop/src-tauri/target/release/diagramai.exe`.
+- Identifier `local.diagramai.app` chỉ cho thử nghiệm; identifier phát hành và metadata phải được duyệt sau. Icon từ logo mockup, nguồn `design/app-icon.svg`.
+
+Dependency audit mới nhất ngày 19/11/2026 trả 0 advisories; lịch sử cảnh báo và giới hạn tại `docs/p0-dependency-audit.md`. Build/audit đạt không đồng nghĩa toàn bộ sản phẩm đã qua security review.
 
 ## Neon P0
 
@@ -73,7 +79,7 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 1. Đặt repository variable `VITE_BASE_PATH`: `/<tên-repo-đã-chốt>/` cho project site, `/` cho user site/custom domain.
 2. `VITE_API_BASE_URL`: URL HTTPS công khai của Neon Function, không chứa token; có thể để trống khi chưa liên kết Neon.
 3. Chạy workflow **Deploy Pages (manual P0 spike)**. Không tự publish từ build local.
-4. Kiểm tra URL thật, refresh `/#/spike`, CORS trong Chrome.
+4. Kiểm tra URL thật, refresh `/#/spike`, CORS trong trình duyệt. Tôn trọng lựa chọn Cốc Cốc của chủ dự án; không tự mở Chrome.
 
 `node scripts/p0-github-pages.mjs status` đọc trạng thái qua Git Credential Manager mà không in/lưu token. Mode `setup`/`dispatch` sửa config hoặc deploy repo đã chốt, chỉ chạy khi có ý định publish; không được gọi tự động từ build local. Không mặc định workflow file hoặc dispatch đồng nghĩa deploy thành công.
 
@@ -82,9 +88,9 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 - `apps/web`: React/Vite entry.
 - `apps/desktop`: Tauri 2, dùng cùng frontend.
 - `apps/api`: Neon health handler và cấu hình deploy spike.
-- `packages/ui`: P0 shell tham chiếu + React Flow smoke test; chưa chuyển UI P1.
+- `packages/ui`: AppShell và components React P1, SVG fixture renderer, view state; diagnostics P0 vẫn giữ riêng.
 - `packages/shared`: hợp đồng health công khai và client validation.
 - `design/reference`: bản HTML nguyên vẹn và ảnh baseline.
-- `docs`: kiến trúc, quyết định và báo cáo nghiệm thu P0.
+- `docs`: kiến trúc, quyết định và báo cáo P0/P1.
 
 Engine/domain, SQLite/IndexedDB, sync và AI thuộc các phase sau, **chưa triển khai**.

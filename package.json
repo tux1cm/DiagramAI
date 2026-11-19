@@ -3,15 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24.0.0", "npm": ">=11.0.0" },
-  "workspaces": ["apps/*", "packages/*"],
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "prepare:reference": "node scripts/prepare-reference.mjs",
+    "prepare:reference": "node scripts/prepare-reference.mjs && node scripts/extract-ui-css.mjs",
     "dev": "npm run prepare:reference && npm run dev -w @diagramai/web",
     "build:web": "npm run prepare:reference && npm run build -w @diagramai/web",
     "build:web:desktop": "node scripts/build-desktop-web.mjs",
     "preview": "npm run preview -w @diagramai/web",
-    "lint": "eslint . && node scripts/prepare-reference.mjs --check",
+    "lint": "eslint . && node scripts/prepare-reference.mjs --check && node scripts/extract-ui-css.mjs --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -28,11 +34,14 @@
     "@playwright/test": "1.65.1",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.0",
+    "@types/pngjs": "6.0.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.39.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "^16.0.0",
+    "pixelmatch": "8.0.0",
+    "pngjs": "7.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.0.0",
     "vitest": "5.1.1"
