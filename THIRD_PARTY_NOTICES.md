@@ -15,5 +15,6 @@
 | Playwright | Browser tests | Apache-2.0 |
 | pixelmatch | Dev-only visual comparison | ISC |
 | pngjs | Dev-only PNG read/write for visual tests | MIT |
+| Zod | Runtime document/command validation | MIT |
 
 Neon SDK/config và mọi dependency bắc cầu cần được đối chiếu LICENSE thực tế trước release. Lockfile hiện tại là `package-lock.json` và `apps/desktop/src-tauri/Cargo.lock`. Không nhúng Inter font hoặc tải font bên ngoài: dùng font fallback hệ thống theo mockup. Không dùng stencil/icon library draw.io hoặc gói Pro.

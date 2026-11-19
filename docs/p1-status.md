@@ -78,3 +78,7 @@ Không coi thao tác thay màu bản mẫu hoặc probe health là persistence, 
 5. Link **Kiểm tra nền tảng** ở footer → Kiểm tra API: Neon/PostgreSQL OK; quay lại trình vẽ không cần login.
 
 Không có blocking issue trong phạm vi P1 đã test. Sai khác native đã định lượng và giải thích ở trên; hạn chế engine/persistence là phạm vi các phase sau, không phải tính năng P1 đã hoàn thiện. Chưa tự chuyển sang P2.
+
+## Xác nhận của chủ dự án
+
+Chủ dự án đã chốt **P1 PASS** và yêu cầu triển khai P2 trong cuộc trao đổi tiếp theo. Báo cáo này giữ bằng chứng lịch sử P1; tiến độ engine ở `docs/p2-status.md`.

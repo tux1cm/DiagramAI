@@ -1,6 +1,6 @@
 # DiagramAI
 
-Giao diện React P1 đã đạt kiểm thử kỹ thuật, dùng chung Web/Desktop — **chưa phải editor sản phẩm v1.0**. P0 đã được chủ dự án xác nhận PASS; P1 chờ review trước P2. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Báo cáo P1: [`docs/p1-status.md`](docs/p1-status.md); bằng chứng nền tảng trước đó: [`docs/p0-status.md`](docs/p0-status.md).
+Engine vẽ P2 đã đạt kiểm thử local Web/Desktop, chờ CI/deploy và chủ dự án nghiệm thu — **chưa phải editor sản phẩm v1.0**. P0/P1 đã được chủ dự án xác nhận PASS. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p2-status.md`](docs/p2-status.md); lịch sử: [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Mở http://127.0.0.1:5173. Mặc định vào **giao diện React thật, không iframe, không login**. Chọn một hình mẫu → tab Thuộc tính → thử màu; có tìm hình, thu gọn panel, đổi tên và zoom bản mẫu. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload**. Engine kéo/resize/sửa chữ và Undo/Redo thuộc P2/P3; file/lưu/xuất ảnh thuộc P4. Không dùng P1 lưu công việc thật.
+Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Tab Thuộc tính chỉnh style/kích thước; hỗ trợ đa chọn, clipboard, nhóm/căn chỉnh và Undo/Redo. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload/đóng app**. Chèn hình lên cạnh thông minh thuộc P3; file/lưu/xuất ảnh thuộc P4. Không dùng bản này lưu công việc thật.
 
 Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn đoán React Flow/Neon từ P0. Probe API thành công không phải đồng bộ sơ đồ. Mockup gốc chỉ phục vụ đối chiếu ở `/reference/DiagramAI_Mockup.html`.
 
@@ -46,7 +46,7 @@ Remove-Item Env:VITE_BASE_PATH
 
 Ảnh/metrics/pixel diff nằm trong `test-results/web/`, báo cáo ở `playwright-report/`. Test so sánh trực tiếp với mockup gốc tại cùng viewport; chỉ mask các vùng wording trạng thái/controls chưa có engine được liệt kê trong `docs/p1-status.md`, không mask canvas/palette/layout.
 
-## Desktop P1
+## Desktop
 
 Cần Rust stable **MSVC x64**, Visual Studio C++ Build Tools + Windows SDK và WebView2. Trên máy hiện tại, Rust/Cargo 1.100.0 đã được cài theo chấp thuận của chủ dự án. Mở terminal mới để nhận PATH Rustup (`%USERPROFILE%\.cargo\bin`).
 
@@ -58,7 +58,7 @@ npm run desktop:build
 
 `build.bat` kiểm tra môi trường và Vite server đang giữ dependency, dùng `npm ci`, kiểm tra mã, build NSIS/Web, copy vào `File/Desktop_Light` và `File/Web`, ghi `logs/build.log`. Không deploy, không migration, không ZIP. Output cũ được chuyển nguyên vẹn vào `File/Previous/<timestamp>/`, không xóa hay trộn file. Desktop dùng cùng build Web nhưng ép base `/`; bản Web dùng base đã cấu hình. Dùng `build.bat --no-pause` cho kiểm thử tự động.
 
-**Đã build và kiểm thử NSIS cài/gỡ, WebView2 render, resize/minimize/restore và hash route/reload**. Đây là UI/smoke, chưa nghiệm thu editor sản phẩm. Chạy lại bằng `npm run test:desktop`: dùng thư mục cài riêng, không tạo shortcut, từ chối ghi đè app người dùng đã cài, profile WebView2 riêng và debug loopback chỉ trong test; P1 bổ sung chọn/tô màu và pixel comparison với reference.
+**Đã build và kiểm thử NSIS cài/gỡ, WebView2 render, resize/minimize/restore và hash route/reload**. P2 kiểm tra thêm sửa chữ/nhãn cạnh, kéo/resize, nối, clipboard và Undo; chưa nghiệm thu editor sản phẩm hoàn chỉnh. Chạy lại bằng `npm run test:desktop`: dùng thư mục cài riêng, không tạo shortcut, từ chối ghi đè app người dùng đã cài, profile WebView2 riêng và debug loopback chỉ trong test; so pixel với reference ở 3 viewport sau khi fit cùng camera.
 
 - Bộ cài: `File/Desktop_Light/DiagramAI_Setup_x64.exe`.
 - Chạy thử **không cần setup**: `apps/desktop/src-tauri/target/release/diagramai.exe`.
@@ -88,9 +88,11 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 - `apps/web`: React/Vite entry.
 - `apps/desktop`: Tauri 2, dùng cùng frontend.
 - `apps/api`: Neon health handler và cấu hình deploy spike.
-- `packages/ui`: AppShell và components React P1, SVG fixture renderer, view state; diagnostics P0 vẫn giữ riêng.
+- `packages/ui`: AppShell, components React và properties/shortcuts; diagnostics P0 vẫn giữ riêng.
+- `packages/diagram-core`: schema/registry, commands atomic, clipboard, nhóm/căn chỉnh và history độc lập React Flow.
+- `packages/editor`: adapter React Flow, SVG nodes/edges, inline labels, kéo/resize/connect và viewport.
 - `packages/shared`: hợp đồng health công khai và client validation.
 - `design/reference`: bản HTML nguyên vẹn và ảnh baseline.
-- `docs`: kiến trúc, quyết định và báo cáo P0/P1.
+- `docs`: kiến trúc, quyết định và báo cáo P0/P1/P2.
 
-Engine/domain, SQLite/IndexedDB, sync và AI thuộc các phase sau, **chưa triển khai**.
+SQLite/IndexedDB, file import/export, sync và AI thuộc các phase sau, **chưa triển khai**.

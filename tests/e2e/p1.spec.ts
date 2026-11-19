@@ -21,19 +21,23 @@ test('properties apply color only to the selected fixture and do not fake persis
   await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Thuộc tính', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Hình mẫu Tiếp nhận vật tư', exact: true }).click();
+  await page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).click();
   await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
-  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#e3f9ef');
-  await expect(page.locator('[data-node=n1] .node-border')).toHaveAttribute('fill', '#e9f0ff');
-  await expect(page.locator('.top-status')).toHaveText('Bản thử · Chưa lưu');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
+  await expect(page.getByRole('button', { name: 'Hình Bắt đầu', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e9f0ff');
+  await expect(page.locator('.top-status')).toHaveText('Chưa lưu · Có thay đổi');
   await page.getByRole('button', { name: 'Đường nối Không', exact: true }).click();
   await expect(page.getByLabel('Nhãn đường nối', { exact: true })).toHaveValue('Không');
-  await expect(page.getByLabel('Nhãn đường nối', { exact: true })).toHaveAttribute('readonly', '');
+  await expect(page.getByLabel('Nhãn đường nối', { exact: true })).toBeEditable();
+  await page.getByLabel('Nhãn đường nối', { exact: true }).fill('Chưa đạt');
+  await page.getByLabel('Nhãn đường nối', { exact: true }).press('Enter');
+  await expect(page.getByRole('button', { name: 'Đường nối Chưa đạt', exact: true })).toBeVisible();
+  page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
   await page.reload();
-  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#ffffff');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#ffffff');
 });
 
-test('unsupported file, drawing and AI operations explicitly explain the phase', async ({ page, baseURL }) => {
+test('drawing works while file and AI operations still explain their later phase', async ({ page, baseURL }) => {
   const external: string[] = [];
   const origin = new URL(baseURL!).origin;
   page.on('request', (request) => { if (new URL(request.url()).origin !== origin) external.push(request.url()); });
@@ -43,9 +47,10 @@ test('unsupported file, drawing and AI operations explicitly explain the phase',
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Lưu file', exact: true })).toBeFocused();
-  await page.locator('[data-shape=rect]').click();
-  await expect(page.getByRole('dialog')).toContainText('engine P2');
-  await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+  await page.locator('.shape-tile[data-shape=rect]').click();
+  await expect(page.locator('[data-node]')).toHaveCount(7);
+  await page.getByRole('toolbar').getByRole('button', { name: 'Hoàn tác (Ctrl+Z)', exact: true }).click();
+  await expect(page.locator('[data-node]')).toHaveCount(6);
   await page.getByRole('textbox', { name: 'Yêu cầu cho trợ lý AI', exact: true }).fill('<img src=x onerror=alert(1)>');
   await page.getByRole('button', { name: 'Gửi', exact: true }).click();
   await expect(page.locator('.chatbox')).toContainText('AI chưa được kết nối (P6)');
@@ -89,10 +94,10 @@ test('narrow viewport uses the original overlay sidebar without a new layout', a
   await expect(page.locator('.inspector')).toBeHidden();
 });
 
-test('modal traps focus and unsupported engine buttons are disabled', async ({ page }) => {
+test('modal traps focus and P2 engine tools are enabled', async ({ page }) => {
   await page.goto('./');
-  await expect(page.getByRole('toolbar', { name: 'Công cụ canvas', exact: true }).getByRole('button', { name: 'Di chuyển canvas · P2', exact: true })).toBeDisabled();
-  await page.getByRole('button', { name: 'Hướng dẫn và trạng thái P1', exact: true }).click();
+  await expect(page.getByRole('toolbar', { name: 'Công cụ canvas', exact: true }).getByRole('button', { name: 'Di chuyển canvas (Space)', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Hướng dẫn và trạng thái P2', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');

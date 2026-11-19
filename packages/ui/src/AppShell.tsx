@@ -3,6 +3,8 @@ import { Background, ReactFlow } from '@xyflow/react';
 import { checkHealth } from '@diagramai/shared';
 import '@xyflow/react/dist/style.css';
 import { EditorShell } from './editor/EditorShell';
+import { DiagramStore } from '@diagramai/diagram-core';
+import { createInitialDocument } from './editor/initial-document';
 
 const nodes = [
   { id: 'p0-a', position: { x: 0, y: 0 }, data: { label: 'React Flow v12' } },
@@ -11,6 +13,7 @@ const nodes = [
 const edges = [{ id: 'p0-ab', source: 'p0-a', target: 'p0-b' }];
 
 export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl: string }) {
+  const [store] = useState(() => new DiagramStore(createInitialDocument()));
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -19,6 +22,11 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
     window.addEventListener('hashchange', update);
     return () => window.removeEventListener('hashchange', update);
   }, []);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => { if (store.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [store]);
   async function probe() {
     setBusy(true);
     setHealth('Đang kiểm tra…');
@@ -31,7 +39,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return <EditorShell/>;
+  if (route !== '#/spike') return <EditorShell store={store}/>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>
@@ -54,7 +62,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
         <button onClick={() => void probe()} disabled={!apiBaseUrl || busy}>Kiểm tra API</button>
         <p role="status">{health}</p>
       </section>
-      <p>AI, đồng bộ, lưu local và file production chưa triển khai. Canvas P1 dùng dữ liệu mẫu trong bộ nhớ.</p>
+      <p>Engine P2 chỉnh sửa được trong bộ nhớ. AI, đồng bộ, lưu local và file production chưa triển khai; đi lại giữa trang kiểm tra và canvas không làm mất sơ đồ đang mở.</p>
     </main>
   );
 }

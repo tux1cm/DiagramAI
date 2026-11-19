@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { mkdtempSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { captureReferenceView, compareReferenceViews } from '../helpers/visual-reference';
+import { blockSystemClipboard, connectHandles, dragBy, nodeButton, nodeModel, shortcut } from '../helpers/drawing';
 
 test('installed Tauri app renders WebView2, resizes, minimizes, restores and navigates', async ({ playwright }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows/WebView2 only');
@@ -54,6 +55,9 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
       expect(size.height).toBe(height);
       await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual([width, height]);
       await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
+      // The editor intentionally preserves pan/zoom on native window resize;
+      // the mockup auto-fits. Compare the same explicit fitted camera at each size.
+      await page.getByRole('button', { name: 'Vừa màn hình', exact: true }).click();
       const current = await captureReferenceView(page, testInfo.outputPath(`webview2-${width}x${height}.png`));
       await page.goto(new URL('reference/DiagramAI_Mockup.html', editorUrl).href);
       await expect(page.locator('[data-node]')).toHaveCount(6);
@@ -64,10 +68,37 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     }
     expect(window('minimize').minimized).toBe(true);
     expect(window('restore').minimized).toBe(false);
+    await blockSystemClipboard(page);
+    const editable = nodeModel(page, 'Tiếp nhận vật tư'), nodeId = await editable.getAttribute('data-node');
+    const liveNode = page.locator(`[data-node="${nodeId}"]`);
+    await editable.dblclick();
+    await page.getByRole('textbox', { name: 'Sửa chữ trong hình', exact: true }).fill('Vật tư P2');
+    await page.getByRole('textbox', { name: 'Sửa chữ trong hình', exact: true }).press('Enter');
+    await expect(nodeButton(page, 'Vật tư P2')).toBeVisible();
+    await shortcut(page, 'Control+z'); await expect(nodeButton(page, 'Tiếp nhận vật tư')).toBeVisible();
+    const x = await liveNode.getAttribute('data-x'), width = await liveNode.getAttribute('data-width');
+    await dragBy(page, liveNode, 50, 30); await expect(liveNode).not.toHaveAttribute('data-x', x!);
+    await shortcut(page, 'Control+z'); await expect(liveNode).toHaveAttribute('data-x', x!);
+    await liveNode.click(); await dragBy(page, liveNode.locator('.react-flow__resize-control.handle.bottom.right'), 40, 25);
+    await expect(liveNode).not.toHaveAttribute('data-width', width!);
+    await expect(page.locator('.toast')).toHaveCount(0);
+    await shortcut(page, 'Control+z'); await expect(liveNode).toHaveAttribute('data-width', width!);
+    await liveNode.hover(); await connectHandles(page, liveNode.locator('.port-right'), nodeModel(page, 'Trả nhà cung cấp').locator('.port-left'));
+    await expect(page.locator('[data-edge]')).toHaveCount(6);
+    await shortcut(page, 'Control+z'); await expect(page.locator('[data-edge]')).toHaveCount(5);
+    await liveNode.click(); await shortcut(page, 'Control+c'); await shortcut(page, 'Control+v');
+    await expect(page.locator('[data-node]')).toHaveCount(7);
+    await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(6);
+    await page.getByRole('button', { name: 'Đường nối Không', exact: true }).dblclick();
+    await page.getByRole('textbox', { name: 'Sửa nhãn đường nối', exact: true }).fill('Chưa đạt');
+    await page.getByRole('textbox', { name: 'Sửa nhãn đường nối', exact: true }).press('Enter');
+    await expect(page.getByRole('button', { name: 'Đường nối Chưa đạt', exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath('webview2-p2-inline.png') });
+    await shortcut(page, 'Control+z');
     await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
-    await page.getByRole('button', { name: 'Hình mẫu Tiếp nhận vật tư', exact: true }).click();
+    await page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).click();
     await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
-    await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#e3f9ef');
+    await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
     await page.screenshot({ path: testInfo.outputPath('webview2-properties.png') });
     await page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'DiagramAI · P0' })).toBeVisible();
@@ -82,6 +113,7 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     } else {
       testInfo.annotations.push({ type: 'api', description: 'Not configured in this build; no live API assertion.' });
     }
+    page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
     await page.reload();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await page.getByRole('link', { name: '← Về trình vẽ' }).click();

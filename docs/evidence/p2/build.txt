@@ -1,0 +1,141 @@
+[1/6] Check Windows toolchain
+OK node : C:\Program Files\nodejs\node.exe
+OK npm : C:\Program Files\nodejs\npm.ps1
+OK git : C:\Program Files\Git\cmd\git.exe
+OK rustc : C:\Users\tux1c\.cargo\bin\rustc.exe
+OK cargo : C:\Users\tux1c\.cargo\bin\cargo.exe
+OK MSVC: C:\Program Files\Microsoft Visual Studio\18\Community
+OK WebView2 installation folder found (runtime launch not verified)
+Toolchain precheck OK. This is not proof of a successful EXE build.
+No DiagramAI Vite server holding native dependencies detected.
+[2/6] Install locked dependencies
+npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 242 packages, and audited 250 packages in 32s
+
+55 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+> diagramai@0.0.0 prepare:reference
+> node scripts/prepare-reference.mjs && node scripts/extract-ui-css.mjs
+
+Reference SHA-256: 39e37f0f4dded9c31da9bbf9131ab23acc5283c9d7c7063b7492b87dc3212928 (F:\Tools\DiagramAI\)
+Approved UI CSS verified (no reference edits).
+[3/6] Lint, types, unit tests
+
+> diagramai@0.0.0 check
+> npm run lint && npm run typecheck && npm test
+
+
+> diagramai@0.0.0 lint
+> eslint . && node scripts/prepare-reference.mjs --check && node scripts/extract-ui-css.mjs --check
+
+Reference SHA-256: 39e37f0f4dded9c31da9bbf9131ab23acc5283c9d7c7063b7492b87dc3212928 (F:\Tools\DiagramAI\)
+Approved UI CSS verified (no reference edits).
+
+> diagramai@0.0.0 typecheck
+> tsc --noEmit
+
+
+> diagramai@0.0.0 test
+> vitest run
+
+
+ RUN  v5.1.1 F:/Tools/DiagramAI
+
+
+ Test Files  4 passed (4)
+      Tests  75 passed (75)
+   Start at  12:35:19
+   Duration  571ms (transform 45%, tests 26%, import 25%, worker 4%)
+
+[4/6] Build shared Web + Tauri NSIS
+
+> diagramai@0.0.0 desktop:build
+> npm run build -w @diagramai/desktop
+
+
+> @diagramai/desktop@0.0.0 build
+> tauri build --bundles nsis
+
+        Info Looking up installed tauri packages to check mismatched versions...
+        Warn The bundle identifier "local.diagramai.app" set in `"tauri.conf.json" identifier` ends with `.app`. This is not recommended because it conflicts with the application bundle extension on macOS.
+     Running beforeBuildCommand `npm run build:web:desktop`
+
+> diagramai@0.0.0 build:web:desktop
+> node scripts/build-desktop-web.mjs
+
+
+> diagramai@0.0.0 build:web
+> npm run prepare:reference && npm run build -w @diagramai/web
+
+
+> diagramai@0.0.0 prepare:reference
+> node scripts/prepare-reference.mjs && node scripts/extract-ui-css.mjs
+
+Reference SHA-256: 39e37f0f4dded9c31da9bbf9131ab23acc5283c9d7c7063b7492b87dc3212928 (F:\Tools\DiagramAI\)
+Approved UI CSS verified (no reference edits).
+
+> @diagramai/web@0.0.0 build
+> vite build
+
+[36mvite v8.3.8 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 158 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.44 kB │ gzip:   0.29 kB
+dist/assets/index-B6IEca0e.css   33.52 kB │ gzip:   7.13 kB
+dist/assets/index-DbBMlnGA.js   561.06 kB │ gzip: 173.61 kB
+
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 317ms[39m
+   Compiling diagramai v0.0.0 (F:\Tools\DiagramAI\apps\desktop\src-tauri)
+    Finished `release` profile [optimized] target(s) in 57.75s
+       Built application at: F:\Tools\DiagramAI\apps\desktop\src-tauri\target\release\diagramai.exe
+        Info Patching F:\Tools\DiagramAI\apps\desktop\src-tauri\target\release\diagramai.exe with bundle type information: nsis
+        Info Target: x64
+     Running makensis to produce F:\Tools\DiagramAI\apps\desktop\src-tauri\target\release\bundle\nsis\DiagramAI_0.0.0_x64-setup.exe
+    Finished 1 bundle at:
+        F:\Tools\DiagramAI\apps\desktop\src-tauri\target\release\bundle\nsis\DiagramAI_0.0.0_x64-setup.exe (1.96 MiB)
+
+
+> diagramai@0.0.0 build:web
+> npm run prepare:reference && npm run build -w @diagramai/web
+
+
+> diagramai@0.0.0 prepare:reference
+> node scripts/prepare-reference.mjs && node scripts/extract-ui-css.mjs
+
+Reference SHA-256: 39e37f0f4dded9c31da9bbf9131ab23acc5283c9d7c7063b7492b87dc3212928 (F:\Tools\DiagramAI\)
+Approved UI CSS verified (no reference edits).
+
+> @diagramai/web@0.0.0 build
+> vite build
+
+[36mvite v8.3.8 [32mbuilding client environment for production...[36m[39m
+transforming...
+✓ 158 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.44 kB │ gzip:   0.29 kB
+dist/assets/index-B6IEca0e.css   33.52 kB │ gzip:   7.13 kB
+dist/assets/index-DbBMlnGA.js   561.06 kB │ gzip: 173.61 kB
+
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32m✓ built in 327ms[39m
+[5/6] Copy artifacts (no ZIP, no deploy)
+Archived previous Desktop_Light to File\Previous\20261119-123633-790
+Archived previous Web to File\Previous\20261119-123633-790
+Copied P2 engine artifacts. These are not v1.0 release artifacts.
+[6/6] Output File\Desktop_Light and File\Web

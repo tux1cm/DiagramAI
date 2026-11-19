@@ -8,6 +8,7 @@ export const changedRegions = [
   '.project-header', '.top-actions .chip', '.toolbar .tool-group .toolbtn:not(.active)',
   '.railbtn:nth-child(3)', '.railbtn:nth-child(4)', '.ai-tag', '.chatbox', '.model-tag',
   '.send', '.floating-hint', '.footer',
+  '.palette-tip',
 ];
 const structuralRegions = ['.topbar', '.rail', '.palette', '.toolbar', '#canvasHost', '.inspector', '.tabbar', '.footer'];
 async function boxes(page: Page, selectors: string[]) {

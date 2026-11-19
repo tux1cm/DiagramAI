@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 
-export function Topbar({ title, rename, open }: { title: string; rename: (title: string) => void; open: (kind: 'cloud' | 'files') => void }) {
+export function Topbar({ title, rename, open, dirty }: { title: string; rename: (title: string) => void; open: (kind: 'cloud' | 'files') => void; dirty: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   return <header className="topbar">
@@ -9,7 +9,7 @@ export function Topbar({ title, rename, open }: { title: string; rename: (title:
     <div className="project-header">
       {editing ? <form className="project-name" onSubmit={(event) => { event.preventDefault(); rename(draft); setEditing(false); }}><input aria-label="Tên dự án mẫu" maxLength={100} autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => { rename(draft); setEditing(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); setEditing(false); } }}/></form>
         : <button className="project-name" title="Đổi tên bản mẫu trong phiên này" onClick={() => { setDraft(title); setEditing(true); }}><Icon name="file" size="sm"/><span>{title}</span><Icon name="chev" size="sm"/></button>}
-      <span className="top-status"><span className="status-dot unsaved"/><span>Bản thử · Chưa lưu</span></span>
+      <span className="top-status"><span className={`status-dot unsaved ${dirty ? 'dirty' : ''}`}/><span>{dirty ? 'Chưa lưu · Có thay đổi' : 'Chưa lưu · Bộ nhớ'}</span></span>
     </div>
     <div className="top-actions">
       <button className="chip" onClick={() => open('cloud')} title="Trạng thái đồng bộ"><Icon name="cloud" size="sm"/> Cloud <span style={{ color: '#7785a0' }}>· Chưa bật</span></button>

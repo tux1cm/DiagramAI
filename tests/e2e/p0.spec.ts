@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('opens the P1 React editor without an iframe or login', async ({ page }, testInfo) => {
+test('opens the P2 editor without an iframe or login', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
@@ -10,8 +10,9 @@ test('opens the P1 React editor without an iframe or login', async ({ page }, te
   await expect(page.locator('[data-node]')).toHaveCount(6);
   await expect(page.locator('[data-edge]')).toHaveCount(5);
   await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('.editor-app')).toHaveAttribute('data-phase', 'p2');
   await expect(page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true })).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath('p1-shell.png') });
+  await page.screenshot({ path: testInfo.outputPath('p2-shell.png') });
   expect(errors).toEqual([]);
 });
 

@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/AppShell.tsx", "./styles.css": "./src/styles.css" },
-  "dependencies": { "@diagramai/shared": "*", "@xyflow/react": "12.12.1", "react": "19.3.1" }
+  "dependencies": { "@diagramai/shared": "*", "@diagramai/diagram-core": "*", "@diagramai/editor": "*", "@xyflow/react": "12.12.1", "react": "19.3.1" }
 }

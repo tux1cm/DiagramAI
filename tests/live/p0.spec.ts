@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { dragBy, nodeModel, shortcut } from '../helpers/drawing';
 
-test('real Pages loads P1 React UI and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
+test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
@@ -8,15 +9,27 @@ test('real Pages loads P1 React UI and calls Neon PostgreSQL with browser CORS',
   await expect(page.locator('.shape-tile')).toHaveCount(21);
   await expect(page.locator('[data-node]')).toHaveCount(6);
   await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
-  await page.screenshot({ path: testInfo.outputPath('pages-p1.png') });
+  await page.screenshot({ path: testInfo.outputPath('pages-p2.png') });
+  const node = nodeModel(page, 'Tiếp nhận vật tư'), id = await node.getAttribute('data-node');
+  await node.dblclick();
+  const input = page.getByRole('textbox', { name: 'Sửa chữ trong hình', exact: true });
+  await input.fill('Vật tư P2 trực tuyến'); await input.press('Enter');
+  await expect(page.getByRole('button', { name: 'Hình Vật tư P2 trực tuyến', exact: true })).toBeVisible();
+  await shortcut(page, 'Control+z');
+  const liveNode = page.locator(`[data-node="${id}"]`), width = await liveNode.getAttribute('data-width');
+  await liveNode.click(); await dragBy(page, liveNode.locator('.react-flow__resize-control.handle.bottom.right'), 40, 25);
+  await expect(liveNode).not.toHaveAttribute('data-width', width!);
+  await expect(page.locator('.toast')).toHaveCount(0);
+  await shortcut(page, 'Control+z'); await expect(liveNode).toHaveAttribute('data-width', width!);
   await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
-  await page.getByRole('button', { name: 'Hình mẫu Tiếp nhận vật tư', exact: true }).click();
+  await page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).click();
   await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
-  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#e3f9ef');
-  await expect(page.locator('.top-status')).toHaveText('Bản thử · Chưa lưu');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
+  await expect(page.locator('.top-status')).toHaveText('Chưa lưu · Có thay đổi');
   await page.screenshot({ path: testInfo.outputPath('pages-properties.png') });
+  page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
   await page.reload();
-  await expect(page.locator('[data-node=n2] .node-border')).toHaveAttribute('fill', '#ffffff');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#ffffff');
   await page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true }).click();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
   await expect(page.locator('.react-flow__edge')).toHaveCount(1);

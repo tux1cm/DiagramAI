@@ -1,4 +1,5 @@
 @import './reference.css';
+@import '@diagramai/editor/styles.css';
 #root { height: 100%; }
 .editor-app .status-dot.unsaved { background: #9ca7b8; }
 .editor-app .logo .ico { stroke-width: 2.2; }
@@ -23,3 +24,12 @@ a:focus-visible, button:focus-visible { outline: 3px solid #4867f4; outline-offs
 .spike-page a { color: #4867f4; }
 .spike-page button { padding: 8px 14px; border: 1px solid #e8edf4; border-radius: 8px; cursor: pointer; }
 .flow-spike { height: 240px; border: 1px solid #e8edf4; }
+.editor-app .status-dot.dirty { background: #d69e28; }
+.editor-app .property-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
+.editor-app .field label > input, .editor-app .field label > textarea, .editor-app .field label > select { display: block; margin-top: 7px; font: 13px Inter, 'Segoe UI', Arial, sans-serif; font-weight: 400; }
+.editor-app .color-field input { padding: 3px; height: 32px; }
+.editor-app .property-grid .field { margin: 10px 0; min-width: 0; }
+.editor-app .arrange-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.editor-app .property-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.editor-app .snap-setting { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 12px; color: #687890; }
+.editor-app .toast:before { content: 'i'; color: #4d67d9; }

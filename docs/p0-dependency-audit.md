@@ -11,3 +11,7 @@ Mitigation for P0: keep dev/preview bound to loopback, accept only trusted sourc
 ## Recheck — 2026-11-19 (P1)
 
 After adding dev-only pixelmatch/pngjs visual-test dependencies, both `npm audit --omit=dev` and full `npm audit` reported **0 vulnerabilities** with the registry/advisory data available on this date. No `audit fix --force` or major downgrade was run. This supersedes the current audit count, not the historical P0 observation; it does not prove the underlying advisory was fixed by our UI code or remove the requirement for release security review.
+
+## Recheck — 2026-11-19 (P2)
+
+After adding the domain/editor workspaces and runtime Zod validation, full `npm audit --json` again reports **0 vulnerabilities** (59 production, 232 development dependencies). No forced fixes or toolchain downgrades. Release security review remains separate.
