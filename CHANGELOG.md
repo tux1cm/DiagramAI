@@ -1,5 +1,12 @@
 # Changelog
 
+## P2 follow-up — connector feedback
+
+- Đường gấp khúc tôn trọng hướng của cả neo nguồn/đích, không quay ngược vào hình thoi khi nối hai neo cùng hướng.
+- Preview và cạnh sau thả dùng cùng kiểu: mặc định Cong; chọn preset đường mới thì preview theo preset.
+- Chọn cạnh rồi bấm Mũi tên/Đường thẳng/Hai chiều trong thư viện sẽ đổi cạnh hiện tại, giữ ID/endpoints/nhãn và hỗ trợ Undo/Redo. Có thể đổi lại Cong ở Thuộc tính → Kiểu đường.
+- Favicon dùng logo DiagramAI, hỗ trợ Pages subpath.
+
 ## 0.0.0 — 2026-11-19 — P2 drawing engine technical PASS
 
 - P1 đã được chủ dự án xác nhận PASS; triển khai P2, chưa chuyển P3/P4.

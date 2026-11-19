@@ -64,3 +64,12 @@ Ngày: 2026-11-19. P1 đã được chủ dự án xác nhận PASS. **P2 đạt
 4. Shift+Click/marquee đa chọn; Ctrl+C/V/X/D, Delete, một Ctrl+Z khôi phục cả gesture và các cạnh liên quan.
 5. Space kéo canvas, zoom rồi kéo shape từ palette; thử nhóm/căn chỉnh trong Thuộc tính.
 6. **Không đóng/refresh để giữ sơ đồ**: vẫn chỉ có bộ nhớ phiên, lưu thật ở P4. Ctrl+S phải báo rõ P4, không giả saved.
+
+## Phản hồi connector sau triển khai P2
+
+- Chủ dự án phát hiện nối từ neo hình thoi bị đường gấp khúc quay vào hình, và preview cong nhưng cạnh cuối lại gấp khúc.
+- Router gấp khúc hiện tôn trọng cả sourcePosition/targetPosition, giữ endpoint trên đúng neo. Đây là sửa hướng thoát/tiếp cận neo, **không phải routing tránh mọi vật cản hoặc neo tự do P3**.
+- Mặc định kéo nối là Cong, preview dùng cùng kind với cạnh tạo ra. Preset Mũi tên/Đường thẳng/Hai chiều khi đang chọn cạnh sẽ đổi chính cạnh đó; khi không chọn cạnh sẽ đặt kiểu cho đường mới.
+- Giữ nguyên ID, endpoint/port, nhãn, màu khi đổi preset. Undo/Redo khôi phục kiểu/markers; Thuộc tính → Kiểu đường → Cong để đổi lại.
+- Unit router: 16 tổ hợp hướng neo + normalization float. Kiểm tra thêm E2E neo trái hình thoi → neo trái Nhập kho, preview cong, đổi preset/Undo/Redo.
+- Lượt sửa này: `npm run check` **92/92 unit PASS**, full E2E subpath **60/60 PASS** trên 3 viewport, visual mismatch vẫn **30/0/22 pixels**; không sửa reference hoặc thêm mask.

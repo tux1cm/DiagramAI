@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ForwardedRef, type ReactNode } from 'react';
 import {
-  ConnectionMode, ReactFlow, ReactFlowProvider, SelectionMode, useNodesInitialized, useReactFlow,
+  ConnectionLineType, ConnectionMode, ReactFlow, ReactFlowProvider, SelectionMode, useNodesInitialized, useReactFlow,
   type Connection, type NodeChange, type EdgeChange,
 } from '@xyflow/react';
 import { createEdge, createNode, NODE_SHAPES, SHAPE_DEFINITIONS, type DiagramStore, type DiagramCommand, type DiagramEdge, type NodeShape, type PaletteShape } from '@diagramai/diagram-core';
@@ -108,7 +108,8 @@ function CanvasInner(props: CanvasProps & { canvasRef: ForwardedRef<CanvasHandle
       onNodeDragStop={(_event, _node, moved) => { geometry(moved.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }))); store.finishInteraction(); }}
       onSelectionDragStart={() => { if (!store.getSnapshot().interaction) store.beginInteraction('Di chuyển nhóm'); }}
       onSelectionDragStop={(_event, moved) => { geometry(moved.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }))); store.finishInteraction(); }}
-      onConnect={connect} connectionMode={ConnectionMode.Loose} isValidConnection={(connection) => Boolean(connection.source && connection.target && connection.source !== connection.target)}
+       onConnect={connect} connectionMode={ConnectionMode.Loose} isValidConnection={(connection) => Boolean(connection.source && connection.target && connection.source !== connection.target)}
+       connectionLineType={props.connectionStyle.kind === 'curved' ? ConnectionLineType.Bezier : props.connectionStyle.kind === 'straight' ? ConnectionLineType.Straight : props.connectionStyle.kind === 'smoothstep' ? ConnectionLineType.SmoothStep : ConnectionLineType.Step}
       onReconnect={(edge, connection) => { if (connection.sourceHandle && connection.targetHandle) execute([{ type: 'update_edges', ids: [edge.id], patch: { source: connection.source, target: connection.target, sourceHandle: connection.sourceHandle as DiagramEdge['sourceHandle'], targetHandle: connection.targetHandle as DiagramEdge['targetHandle'] } }], 'Đổi đầu nối'); }}
       onPaneClick={(event) => { if (props.tool === 'text') addAt('text', { x: event.clientX, y: event.clientY }); else store.select([], []); }}
       minZoom={.2} maxZoom={3} zoomOnDoubleClick={false} snapToGrid={props.snap} snapGrid={[10, 10]}

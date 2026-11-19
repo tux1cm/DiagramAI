@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dragBy, nodeModel, shortcut } from '../helpers/drawing';
+import { connectHandles, dragBy, nodeModel, shortcut } from '../helpers/drawing';
 
 test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -26,6 +26,14 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   await expect(liveNode).not.toHaveAttribute('data-width', width!);
   await expect(page.locator('.toast')).toHaveCount(0);
   await shortcut(page, 'Control+z'); await expect(liveNode).toHaveAttribute('data-width', width!);
+  const target = nodeModel(page, 'Trả nhà cung cấp'), targetId = await target.getAttribute('data-node');
+  await liveNode.hover(); await connectHandles(page, liveNode.locator('.port-right'), target.locator('.port-left'));
+  const created = page.locator(`[data-edge][data-source="${id}"][data-target="${targetId}"]`);
+  await expect(created).toHaveAttribute('data-kind', 'curved');
+  await page.locator('.shape-tile[data-shape=arrow]').click();
+  await expect(created).toHaveAttribute('data-kind', 'orthogonal');
+  await shortcut(page, 'Control+z'); await expect(created).toHaveAttribute('data-kind', 'curved');
+  await shortcut(page, 'Control+z'); await expect(page.locator('[data-edge]')).toHaveCount(5);
   await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
   await page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).click();
   await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();

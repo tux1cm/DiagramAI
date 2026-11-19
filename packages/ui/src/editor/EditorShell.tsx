@@ -16,7 +16,7 @@ export function EditorShell({ store }: { store: DiagramStore }) {
   const [inspectorCollapsed, setInspectorCollapsed] = useState(() => window.innerWidth < 930);
   const [dialog, setDialog] = useState<Dialog>(null), [notice, setNotice] = useState('');
   const [tool, setTool] = useState<EditorTool>('select'), [snap, setSnap] = useState(true), [zoom, setZoom] = useState(1);
-  const [connectionStyle, setConnectionStyle] = useState<Pick<DiagramEdge, 'kind' | 'markerStart' | 'markerEnd'>>({ kind: 'orthogonal', markerStart: 'none', markerEnd: 'arrow' });
+  const [connectionStyle, setConnectionStyle] = useState<Pick<DiagramEdge, 'kind' | 'markerStart' | 'markerEnd'>>({ kind: 'curved', markerStart: 'none', markerEnd: 'arrow' });
   const canvas = useRef<CanvasHandle>(null);
   const close = useCallback(() => setDialog(null), []);
   const onError = useCallback((message: string) => setNotice(message), []);
@@ -32,10 +32,16 @@ export function EditorShell({ store }: { store: DiagramStore }) {
   const geometry = (patch: { x?: number; y?: number; width?: number; height?: number }) => state.selection.nodeIds.length > 0 && execute([{ type: 'geometry', values: state.selection.nodeIds.map((id) => ({ id, ...patch })) }], 'Vị trí/kích thước');
   const showAi = useCallback(() => { setInspectorCollapsed(false); setTab('ai'); }, []);
   const lineTool = useCallback((shape: PaletteShape) => {
+    const style: Pick<DiagramEdge, 'kind' | 'markerStart' | 'markerEnd'> = { kind: shape === 'line' ? 'straight' : 'orthogonal', markerStart: shape === 'bidirectional' ? 'arrow' : 'none', markerEnd: shape === 'line' ? 'none' : 'arrow' };
+    const { edgeIds } = store.getSnapshot().selection;
+    if (edgeIds.length) {
+      execute([{ type: 'update_edges', ids: edgeIds, patch: style }], 'Đổi loại đường nối');
+      return;
+    }
     setTool('link');
-    setConnectionStyle({ kind: shape === 'line' ? 'straight' : 'orthogonal', markerStart: shape === 'bidirectional' ? 'arrow' : 'none', markerEnd: shape === 'line' ? 'none' : 'arrow' });
+    setConnectionStyle(style);
     setNotice('Kéo từ một điểm neo của hình này sang hình khác để nối.');
-  }, []);
+  }, [store, execute]);
   const addShape = (shape: PaletteShape) => { if ((NODE_SHAPES as readonly string[]).includes(shape)) canvas.current?.addShape(shape as NodeShape); else lineTool(shape); };
   useEffect(() => {
     const typing = (target: EventTarget | null) => target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable=true]'));

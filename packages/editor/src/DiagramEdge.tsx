@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BaseEdge, getBezierPath, getSmoothStepPath, type Edge, type EdgeProps } from '@xyflow/react';
 import type { DiagramEdge } from '@diagramai/diagram-core';
 import { executeSafely, useEngine } from './context';
+import { orthogonalPath } from './edge-geometry';
 
 export type FlowEdge = Edge<{ value: DiagramEdge }, 'diagram'>;
 export function DiagramEdgeView(props: EdgeProps<FlowEdge>) {
@@ -17,9 +18,10 @@ export function DiagramEdgeView(props: EdgeProps<FlowEdge>) {
   let path: string, x: number, y: number;
   if (edge.kind === 'curved') [path, x, y] = getBezierPath(geometry);
   else if (edge.kind === 'smoothstep') [path, x, y] = getSmoothStepPath(geometry);
+  else if (edge.kind === 'orthogonal') [path, x, y] = orthogonalPath(geometry);
   else {
     const a = { x: geometry.sourceX, y: geometry.sourceY }, b = { x: geometry.targetX, y: geometry.targetY };
-    const points = edge.kind === 'straight' ? [a, b] : ['top', 'bottom'].includes(edge.sourceHandle) ? [a, { x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }, b] : [a, { x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }, b];
+    const points = [a, b];
     const rounded = points.map((point) => ({ x: Number(point.x.toFixed(1)), y: Number(point.y.toFixed(1)) }));
     const unique = rounded.filter((point, i) => !i || point.x !== rounded[i - 1].x || point.y !== rounded[i - 1].y);
     path = 'M' + unique.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' L');
@@ -35,7 +37,7 @@ export function DiagramEdgeView(props: EdgeProps<FlowEdge>) {
   const finish = () => { if (!cancelled.current) executeSafely(store, [{ type: 'update_edges', ids: [edge.id], patch: { label: draft } }], 'Sửa nhãn đường nối', onError); setEditing(false); };
   const start = () => { cancelled.current = false; setDraft(edge.label); setEditing(true); };
   const width = Math.max(48, edge.label.length * edge.style.fontSize * .57 + 12);
-  return <g data-edge={edge.id} data-source={edge.source} data-target={edge.target} data-source-handle={edge.sourceHandle} data-target-handle={edge.targetHandle} onDoubleClick={(event) => { event.stopPropagation(); start(); }}>
+  return <g data-edge={edge.id} data-kind={edge.kind} data-source={edge.source} data-target={edge.target} data-source-handle={edge.sourceHandle} data-target-handle={edge.targetHandle} onDoubleClick={(event) => { event.stopPropagation(); start(); }}>
     <defs>{(['start', 'end'] as const).map((end) => <marker key={end} id={`${end}-${edge.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill={props.selected ? '#566dfa' : stroke}/></marker>)}</defs>
     <BaseEdge id={edge.id} path={path} interactionWidth={20} markerStart={edge.markerStart === 'arrow' ? `url(#start-${edge.id})` : undefined} markerEnd={edge.markerEnd === 'arrow' ? `url(#end-${edge.id})` : undefined} style={{ stroke, strokeWidth: props.selected ? Math.max(2.6, edge.style.strokeWidth) : edge.style.strokeWidth, strokeDasharray: edge.style.dashed ? '6 4' : undefined, strokeLinecap: 'round', strokeLinejoin: 'round' }}/>
     {edge.label && !editing && <g className="edge-label" style={{ cursor: 'text' }}><rect x={x - width / 2} y={y - 18} width={width} height="21" rx="8" fill="#fff" stroke="#e9edf5"/><text x={x} y={y - 4} textAnchor="middle" fontSize={edge.style.fontSize} fontFamily="Inter,Segoe UI,Arial" fontWeight="700" fill={edge.style.textColor}>{edge.label}</text></g>}

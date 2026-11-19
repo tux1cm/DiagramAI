@@ -85,6 +85,11 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await shortcut(page, 'Control+z'); await expect(liveNode).toHaveAttribute('data-width', width!);
     await liveNode.hover(); await connectHandles(page, liveNode.locator('.port-right'), nodeModel(page, 'Trả nhà cung cấp').locator('.port-left'));
     await expect(page.locator('[data-edge]')).toHaveCount(6);
+    const created = page.locator(`[data-edge][data-source="${nodeId}"][data-source-handle="right"]`);
+    await expect(created).toHaveAttribute('data-kind', 'curved');
+    await page.locator('.shape-tile[data-shape=arrow]').click();
+    await expect(created).toHaveAttribute('data-kind', 'orthogonal');
+    await shortcut(page, 'Control+z'); await expect(created).toHaveAttribute('data-kind', 'curved');
     await shortcut(page, 'Control+z'); await expect(page.locator('[data-edge]')).toHaveCount(5);
     await liveNode.click(); await shortcut(page, 'Control+c'); await shortcut(page, 'Control+v');
     await expect(page.locator('[data-node]')).toHaveCount(7);

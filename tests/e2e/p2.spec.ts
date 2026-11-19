@@ -56,7 +56,8 @@ test('dragging and corner resize keep edge identity/handles and undo each gestur
     }).toBeLessThan(.11);
   };
   const before = { x: await node.getAttribute('data-x'), y: await node.getAttribute('data-y'), width: await node.getAttribute('data-width'), height: await node.getAttribute('data-height') };
-  expect(originalPath).toBe('M385.0,234.0 L385.0,269.5 L385.0,305.0');
+  expect(originalPath).toMatch(/^M385\.0,234\.0 L/);
+  expect(originalPath).toMatch(/ L385\.0,305\.0$/);
   await dragBy(page, node, 80, 40);
   await expect(node).not.toHaveAttribute('data-x', before.x!);
   await expect(edge).toHaveAttribute('data-edge', edgeId!);
@@ -224,4 +225,42 @@ test('font/stroke properties and arrow-key steps are undoable without stealing t
   await shortcut(page, 'Control+z');
   await expect(node.locator('.node-border')).not.toHaveAttribute('stroke-dasharray');
   await expect(node.locator('text').first()).toHaveAttribute('font-size', '18');
+});
+
+test('new connectors keep the preview curve and palette presets convert the selected edge with undo', async ({ page }, testInfo) => {
+  await page.goto('./'); await ready(page);
+  const from = nodeModel(page, 'Đạt yêu cầu?'), to = nodeModel(page, 'Nhập kho');
+  const source = await from.getAttribute('data-node'), target = await to.getAttribute('data-node');
+  await from.hover();
+  const start = await from.locator('.port-left').boundingBox(), end = await to.locator('.port-left').boundingBox();
+  await page.mouse.move(start!.x + start!.width / 2, start!.y + start!.height / 2); await page.mouse.down();
+  await page.mouse.move(end!.x + end!.width / 2, end!.y + end!.height / 2, { steps: 20 });
+  await expect(page.locator('.react-flow__connection-path')).toHaveAttribute('d', /C/);
+  await page.mouse.up();
+  const edge = page.locator(`[data-edge][data-source="${source}"][data-target="${target}"][data-source-handle="left"]`);
+  await expect(edge).toHaveAttribute('data-kind', 'curved');
+  await expect(edge.locator('.react-flow__edge-path')).toHaveAttribute('d', /C/);
+  const id = await edge.getAttribute('data-edge');
+  await page.locator('.shape-tile[data-shape=arrow]').click();
+  await expect(edge).toHaveAttribute('data-edge', id!);
+  await expect(edge).toHaveAttribute('data-kind', 'orthogonal');
+  await expect(page.locator('[data-edge]')).toHaveCount(6);
+  const points = (await edge.locator('.react-flow__edge-path').getAttribute('d'))!.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+  // Left port must initially exit left, not turn back inside the diamond.
+  expect(points[2]).toBeLessThan(points[0]); expect(points[3]).toBe(points[1]);
+  // Approach the target's left port from outside its left boundary.
+  expect(points.at(-4)).toBeLessThan(points.at(-2)!); expect(points.at(-3)).toBe(points.at(-1));
+  await page.screenshot({ path: testInfo.outputPath('diamond-port-routing.png') });
+  await shortcut(page, 'Control+z'); await expect(edge).toHaveAttribute('data-kind', 'curved');
+  await shortcut(page, 'Control+y'); await expect(edge).toHaveAttribute('data-kind', 'orthogonal');
+  await page.locator('.shape-tile[data-shape=line]').click();
+  await expect(edge).toHaveAttribute('data-kind', 'straight');
+  await expect(edge.locator('.react-flow__edge-path')).not.toHaveAttribute('marker-end');
+  await page.locator('.shape-tile[data-shape=bidirectional]').click();
+  await expect(edge.locator('.react-flow__edge-path')).toHaveAttribute('marker-start', /start-/);
+  await expect(edge.locator('.react-flow__edge-path')).toHaveAttribute('marker-end', /end-/);
+  await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
+  await page.getByLabel('Kiểu đường', { exact: true }).selectOption('curved');
+  await expect(edge).toHaveAttribute('data-kind', 'curved');
+  await expect(edge.locator('.react-flow__edge-path')).toHaveAttribute('d', /C/);
 });
