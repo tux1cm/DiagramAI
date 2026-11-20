@@ -5,6 +5,7 @@
 - Chọn hình rồi Ctrl+kéo một trong bốn góc để resize tỷ lệ rộng/cao, giữ góc đối diện và cỡ chữ. Kéo góc không Ctrl vẫn tự do; Ctrl+kéo thân vẫn nhân đôi.
 - Clamp min/max theo cùng một hệ số scale; có live geometry/edge anchoring, một Undo và Escape hủy, không thêm bản sao.
 - Gesture được chốt ở pointer-down, dùng world coordinates độc lập zoom; không giả mouse events vào thư viện RF vốn chặn Ctrl-mousedown.
+- Đạt 136 unit tests, 136 E2E PASS (+2 skip stress lặp), bản cài Windows, CI/Pages và 3/3 live tests. Commit `1c7b24c` đã deploy; chưa chuyển P4.
 
 ## P3 follow-up — Ctrl+kéo nhân đôi
 

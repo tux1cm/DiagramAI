@@ -2,7 +2,7 @@
 
 ## Bổ sung cuối: Ctrl+kéo nút góc — 2026-11-20
 
-Đã PASS local Web/Desktop, đang chuẩn bị CI/deploy bổ sung theo yêu cầu cuối của chủ dự án; phần Ctrl+kéo thân để nhân đôi đã có trên site.
+Đã PASS Web/Desktop, CI/Pages và live theo yêu cầu bổ sung cuối của chủ dự án; site và bộ cài có đủ Ctrl+kéo thân nhân đôi và Ctrl+kéo góc giữ tỷ lệ. Chưa chuyển P4.
 
 - Chọn hình trước, giữ Ctrl rồi kéo một trong bốn nút góc để phóng to/thu nhỏ đúng tỷ lệ, cố định góc đối diện. Modifier được chốt ở pointer-down; nhả Ctrl giữa chừng không đổi loại thao tác.
 - Kéo góc không Ctrl vẫn tự do; Ctrl+kéo thân vẫn nhân đôi, không nhầm với resize. Cỡ chữ/style giữ nguyên; các cạnh vẫn giữ ID/port và bám live geometry.
@@ -10,6 +10,7 @@
 - RF/D3 chặn Ctrl-mousedown: dùng pointer capture riêng cho Ctrl-corner, không sửa thư viện hoặc phát mouse event giả.
 - Lint/typecheck/unit **136/136 PASS**; **24/24 ca Ctrl-corner PASS** trên 3 viewport, gồm bốn góc, shrink/min, không Ctrl, nhả modifier sớm, Escape và zoom 50/200%. Full hồi quy subpath **136 PASS + 2 skip stress lặp có chủ đích**; visual giữ **30/0/22 pixels**, không thêm mask.
 - Full Windows build và bản cài WebView2 **PASS**, gồm Ctrl+kéo nhân đôi, Ctrl-corner resize giữ tỷ lệ và một Undo, không tạo thêm bản sao; native visual vẫn **392/316/378 pixels** trên 3 viewport.
+- Commit `1c7b24c`: [CI 44647958095](https://github.com/tux1cm/DiagramAI/actions/runs/44647958095) và [Pages 44647973521](https://github.com/tux1cm/DiagramAI/actions/runs/44647973521) **SUCCESS**. Live **3/3 PASS** trên 3 viewport, có Ctrl+kéo thân, Ctrl-corner resize và Undo phục hồi đúng geometry trên site thật.
 
 ## Bổ sung Ctrl+kéo — 2026-11-20
 

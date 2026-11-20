@@ -15,5 +15,6 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `live-*-pages-ctrl-drag.png`: Ctrl+kéo trên Pages thật sau deploy `b53d950`, cả 3 viewport; test kiểm tra số node/cạnh, vị trí nguồn và một Undo.
 - `ctrl-corner-resize.png`: Ctrl+kéo nút góc giữ tỷ lệ, không nhân đôi, cạnh vẫn bám hình; assertions kiểm tra trước pointer-up, góc đối diện, font, Undo/Redo. Bộ bổ sung chạy cả bốn góc, giới hạn min và zoom 50/200% trên 3 viewport.
 - `webview2-ctrl-corner.png`: resize tỷ lệ thật trong bản cài Windows, không tăng node count và một Undo trả đúng geometry ban đầu. Log/manifest hiện trỏ đến bộ cài có đủ hai cử chỉ Ctrl.
+- `live-*-pages-ctrl-corner.png`: Ctrl-corner resize trên Pages thật sau deploy `1c7b24c`, cả 3 viewport; kiểm tra tỷ lệ, không thêm node/cạnh và Undo đúng geometry.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.
