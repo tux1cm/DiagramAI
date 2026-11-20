@@ -16,7 +16,7 @@ test('palette filtering and panel collapse use React state', async ({ page }) =>
   await expect(page.locator('.shape-tile')).toHaveCount(21);
 });
 
-test('properties apply color only to the selected fixture and do not fake persistence', async ({ page }) => {
+test('properties apply color only to the selected fixture and persist after autosave', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
   await page.getByRole('tab', { name: 'Thuộc tính', exact: true }).click();
@@ -32,21 +32,21 @@ test('properties apply color only to the selected fixture and do not fake persis
   await page.getByLabel('Nhãn đường nối', { exact: true }).fill('Chưa đạt');
   await page.getByLabel('Nhãn đường nối', { exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: 'Đường nối Chưa đạt', exact: true })).toBeVisible();
-  page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
+  await expect(page.locator('.top-status')).toHaveText('Đã lưu trên máy');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#ffffff');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
 });
 
-test('drawing works while file and AI operations still explain their later phase', async ({ page, baseURL }) => {
+test('drawing works with local project management while AI stays deferred', async ({ page, baseURL }) => {
   const external: string[] = [];
   const origin = new URL(baseURL!).origin;
   page.on('request', (request) => { if (new URL(request.url()).origin !== origin) external.push(request.url()); });
   await page.goto('./');
-  await page.getByRole('button', { name: 'Lưu file', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('P4');
+  await page.getByRole('button', { name: 'Sơ đồ', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('IndexedDB');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Lưu file', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Sơ đồ', exact: true })).toBeFocused();
   await page.locator('.shape-tile[data-shape=rect]').click();
   await expect(page.locator('[data-node]')).toHaveCount(7);
   await page.getByRole('toolbar').getByRole('button', { name: 'Hoàn tác (Ctrl+Z)', exact: true }).click();

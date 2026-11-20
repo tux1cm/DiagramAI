@@ -198,7 +198,9 @@ test('text fields suppress graph shortcuts, numeric fields validate, and diagnos
   await expect(nodeModel(page, 'Vật tư đã chỉnh')).toHaveAttribute('data-width', '220');
   await shortcut(page, 'Control+z'); await expect(nodeModel(page, 'Vật tư đã chỉnh')).toHaveAttribute('data-width', '170');
   await shortcut(page, 'Control+z'); await expect(nodeButton(page, 'Tiếp nhận vật tư')).toBeVisible();
-  await shortcut(page, 'Control+s'); await expect(page.getByRole('dialog')).toContainText('P4');
+  await page.evaluate(() => { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined }); });
+  const download = page.waitForEvent('download'); await shortcut(page, 'Control+s');
+  expect((await download).suggestedFilename()).toMatch(/\.diagramai$/);
 });
 
 test('font/stroke properties and arrow-key steps are undoable without stealing text-input keys', async ({ page }) => {

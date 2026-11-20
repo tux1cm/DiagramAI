@@ -16,4 +16,8 @@ if ($missing.Count) {
     Write-Host 'Install Rust stable MSVC from https://rustup.rs/ and Visual Studio Build Tools: Desktop development with C++ + Windows SDK. Reopen terminal.'
     exit 1
 }
+$rustVersion = (& rustc --version) -replace '^rustc (\d+\.\d+\.\d+).*$', '$1'
+if ([version]$rustVersion -lt [version]'1.90.0') {
+    throw 'P4 SQLite/dialog dependencies require Rust >= 1.90. Run rustup update stable, then reopen the terminal and build again.'
+}
 Write-Host 'Toolchain precheck OK. This is not proof of a successful EXE build.'

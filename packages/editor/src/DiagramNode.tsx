@@ -3,22 +3,10 @@ import { Handle, NodeResizer, Position, useReactFlow, type Node, type NodeProps 
 import { PORTS, resizeWithRatio, SHAPE_DEFINITIONS, type DiagramNode, type ResizeCorner } from '@diagramai/diagram-core';
 import { executeSafely, useEngine } from './context';
 import { Shape } from './Shape';
+import { linesFor } from './text-layout';
 
 export type FlowNode = Node<{ value: DiagramNode; preview?: boolean }, 'diagram'>;
 const positions = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
-function linesFor(text: string, width: number, fontSize: number): string[] {
-  const limit = Math.max(4, Math.floor(width / (fontSize * .6)));
-  const lines: string[] = [];
-  for (const paragraph of text.split('\n')) {
-    let line = '';
-    for (const word of paragraph.split(/\s+/)) {
-      if ((line + ' ' + word).trim().length > limit && line) { lines.push(line); line = word; }
-      else line = (line + ' ' + word).trim();
-    }
-    lines.push(line);
-  }
-  return lines;
-}
 
 export function DiagramNodeView({ id, data, selected, isConnectable }: NodeProps<FlowNode>) {
   const { store, onError } = useEngine();

@@ -1,0 +1,8 @@
+{
+  "name": "@diagramai/local-storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@diagramai/diagram-core": "*", "@tauri-apps/api": "2.12.5" }
+}

@@ -40,11 +40,10 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   await page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).click();
   await page.getByRole('button', { name: 'Màu nền #e3f9ef', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
-  await expect(page.locator('.top-status')).toHaveText('Chưa lưu · Có thay đổi');
+  await expect(page.locator('.top-status')).toHaveText('Đã lưu trên máy');
   await page.screenshot({ path: testInfo.outputPath('pages-properties.png') });
-  page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#ffffff');
+  await expect(page.getByRole('button', { name: 'Hình Tiếp nhận vật tư', exact: true }).locator('.node-border')).toHaveAttribute('fill', '#e3f9ef');
   await page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true }).click();
   await expect(page.locator('.react-flow__node')).toHaveCount(2);
   await expect(page.locator('.react-flow__edge')).toHaveCount(1);

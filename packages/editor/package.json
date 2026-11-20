@@ -3,6 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./renderers": "./src/Shape.tsx", "./styles.css": "./src/engine.css" },
-  "dependencies": { "@diagramai/diagram-core": "*", "@xyflow/react": "12.12.1", "react": "19.3.1" }
+  "exports": { ".": "./src/index.ts", "./renderers": "./src/Shape.tsx", "./export": "./src/export-svg.tsx", "./styles.css": "./src/engine.css" },
+  "dependencies": { "@diagramai/diagram-core": "*", "@xyflow/react": "12.12.1", "react": "19.3.1", "react-dom": "19.3.1" }
 }

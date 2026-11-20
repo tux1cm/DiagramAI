@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+import { pwa } from './pwa';
 
 export default defineConfig(({ mode }) => {
   const envDir = fileURLToPath(new URL('../../', import.meta.url));
@@ -10,7 +11,7 @@ export default defineConfig(({ mode }) => {
     throw new Error('VITE_BASE_PATH must be / or /repository-name/');
   }
   return {
-    plugins: [react()],
+    plugins: [react(), pwa(base)],
     base,
     envDir,
     server: { fs: { allow: ['../..'] } },

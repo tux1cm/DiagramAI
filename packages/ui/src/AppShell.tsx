@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Background, ReactFlow } from '@xyflow/react';
 import { checkHealth } from '@diagramai/shared';
 import '@xyflow/react/dist/style.css';
 import { EditorShell } from './editor/EditorShell';
-import { DiagramStore } from '@diagramai/diagram-core';
+import { IndexedDbRepository, ProjectSession, SqliteRepository } from '@diagramai/local-storage';
+import { isTauri } from '@tauri-apps/api/core';
 import { createInitialDocument } from './editor/initial-document';
 
 const nodes = [
@@ -13,7 +14,8 @@ const nodes = [
 const edges = [{ id: 'p0-ab', source: 'p0-a', target: 'p0-b' }];
 
 export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl: string }) {
-  const [store] = useState(() => new DiagramStore(createInitialDocument()));
+  const [session] = useState(() => new ProjectSession(isTauri() ? new SqliteRepository() : new IndexedDbRepository(), createInitialDocument));
+  const local = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -23,10 +25,28 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
     return () => window.removeEventListener('hashchange', update);
   }, []);
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (store.getSnapshot().dirty) { event.preventDefault(); event.returnValue = ''; } };
+    void session.initialize();
+    const hasDraft = () => Boolean(document.querySelector('.inline-node-editor,.inline-edge-editor,.project-name input'));
+    const warn = (event: BeforeUnloadEvent) => { if (session.hasUnsaved() || session.getSnapshot().status === 'saving' || hasDraft()) { event.preventDefault(); event.returnValue = ''; } };
+    const flush = () => { if (!hasDraft()) void session.flush().catch(() => {}); };
     window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [store]);
+    window.addEventListener('pagehide', flush);
+    let disposed = false, unlisten: (() => void) | undefined;
+    if (isTauri()) void import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
+      const win = getCurrentWindow();
+      const stop = await win.onCloseRequested(async (event) => {
+        event.preventDefault();
+        const active = document.activeElement; if (active instanceof HTMLElement) active.blur();
+        try { await session.initialize(); await session.flush(); await win.destroy(); }
+        catch {
+          const { confirm } = await import('@tauri-apps/plugin-dialog');
+          if (await confirm('Chưa lưu được bản vẽ trên máy. Đóng và bỏ thay đổi chưa lưu? Nên hủy để xuất file dự phòng.', { title: 'DiagramAI · Chưa lưu', kind: 'warning' })) await win.destroy();
+        }
+      });
+      if (disposed) stop(); else unlisten = stop;
+    });
+    return () => { disposed = true; unlisten?.(); window.removeEventListener('beforeunload', warn); window.removeEventListener('pagehide', flush); };
+  }, [session]);
   async function probe() {
     setBusy(true);
     setHealth('Đang kiểm tra…');
@@ -39,7 +59,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return <EditorShell store={store}/>;
+  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath}/>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>
@@ -62,7 +82,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
         <button onClick={() => void probe()} disabled={!apiBaseUrl || busy}>Kiểm tra API</button>
         <p role="status">{health}</p>
       </section>
-      <p>Engine P3 chỉnh sửa và chèn hình vào cạnh trong bộ nhớ. AI, đồng bộ, lưu local và file production chưa triển khai; đi lại giữa trang kiểm tra và canvas không làm mất sơ đồ đang mở.</p>
+      <p>Editor P4 lưu local trên máy. AI và đồng bộ cloud chưa bật; trang kiểm tra không gửi nội dung sơ đồ.</p>
     </main>
   );
 }

@@ -3,6 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/AppShell.tsx", "./styles.css": "./src/styles.css" },
-  "dependencies": { "@diagramai/shared": "*", "@diagramai/diagram-core": "*", "@diagramai/editor": "*", "@xyflow/react": "12.12.1", "react": "19.3.1" }
+  "exports": {
+    ".": "./src/AppShell.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "dependencies": {
+    "@diagramai/diagram-core": "*",
+    "@diagramai/editor": "*",
+    "@diagramai/local-storage": "*",
+    "@diagramai/shared": "*",
+    "@tauri-apps/api": "2.12.5",
+    "@tauri-apps/plugin-dialog": "2.8.4",
+    "@xyflow/react": "12.12.1",
+    "jspdf": "4.2.1",
+    "react": "19.3.1",
+    "svg2pdf.js": "2.9.0"
+  }
 }

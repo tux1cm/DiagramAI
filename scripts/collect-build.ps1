@@ -18,18 +18,19 @@ Copy-Item 'apps/web/dist/*' 'File/Web' -Recurse
 $exe = Get-Item 'File/Desktop_Light/DiagramAI_Setup_x64.exe'
 @{
     version = '0.0.0'
-    phase = 'P3 smart connector - not v1.0'
+    phase = 'P4 local-first - not v1.0'
     builtAt = [DateTime]::UtcNow.ToString('o')
     installer = $exe.Name
     bytes = $exe.Length
     sha256 = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
 } | ConvertTo-Json | Set-Content 'File/Desktop_Light/release-manifest.json' -Encoding UTF8
 @'
-DiagramAI P3 smart connector - no persistent saving yet.
+DiagramAI P4 local-first - preview, not v1.0.
 Run DiagramAI_Setup_x64.exe to install for the current Windows user.
 Requires WebView2. This light installer downloads the bootstrapper only if needed.
-Drawing changes are in-memory only and lost on reload/close. Do not use this build to save real work.
-Cloud sync, AI, and production local persistence are NOT implemented.
+Committed changes autosave locally in SQLite. Only "Da luu tren may" confirms a successful local write.
+Export .diagramai backups before clearing app/browser data; external files are saved only on request.
+Web and Desktop storage are separate. Transfer .diagramai files manually; cloud sync and AI are NOT implemented.
 Uninstall using Windows Settings > Apps > Installed apps > DiagramAI.
 '@ | Set-Content 'File/Desktop_Light/README_Install.txt' -Encoding UTF8
-Write-Host 'Copied P3 connector artifacts. These are not v1.0 release artifacts.'
+Write-Host 'Copied P4 local-first artifacts. These are not v1.0 release artifacts.'

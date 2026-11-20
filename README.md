@@ -1,6 +1,6 @@
 # DiagramAI
 
-P2 đã được chủ dự án xác nhận OK; P3 Smart Connector đạt kiểm thử Web/Desktop, CI/Pages và live, chờ nghiệm thu — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p3-status.md`](docs/p3-status.md); lịch sử: [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
+P3 đã được chủ dự án chốt. P4 local/file/offline đang kiểm chứng — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p4-status.md`](docs/p4-status.md); lịch sử: [`docs/p3-status.md`](docs/p3-status.md), [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
 
 ## Chạy Web trên Windows
 
@@ -11,7 +11,9 @@ npm ci
 npm run dev
 ```
 
-Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Kéo hình rời lên cạnh sáng tím để chèn A→C→B, một Ctrl+Z hoàn tác cả lần chèn. Có snap tâm/cạnh và guideline; nhấp đúp % zoom để nhập mức chính xác. Tab Thuộc tính chỉnh style/kích thước; hỗ trợ đa chọn, clipboard, nhóm/căn chỉnh và Undo/Redo. Mọi thay đổi chỉ trong bộ nhớ, **mất khi reload/đóng app**. File/lưu/xuất ảnh thuộc P4. Không dùng bản này lưu công việc thật.
+Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Kéo hình rời lên cạnh sáng tím để chèn A→C→B, một Ctrl+Z hoàn tác cả lần chèn. Ctrl+kéo thân nhân đôi; Ctrl+kéo góc giữ tỷ lệ quanh tâm. Có snap/guideline, nhóm/căn chỉnh, clipboard và Undo/Redo.
+
+P4 tự lưu thay đổi đã commit vào IndexedDB (Web) / SQLite (Desktop); chỉ **Đã lưu trên máy** sau ghi thành công. Nút **Sơ đồ** quản lý nhiều bản vẽ và 20 checkpoint; **Ctrl+S** lưu `.diagramai`, **Ctrl+Shift+S** lưu thành file mới. Hỗ trợ SVG/PNG/PDF tiếng Việt. File ngoài ổ đĩa không bị autosave ghi đè. Web production có PWA offline sau khi cache hoàn tất; dev server không cài service worker. Xóa site/app data hoặc private session có thể mất kho local: **hãy xuất `.diagramai` dự phòng**. Web/Desktop là hai kho riêng, cloud/AI vẫn P5/P6.
 
 Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn đoán React Flow/Neon từ P0. Probe API thành công không phải đồng bộ sơ đồ. Mockup gốc chỉ phục vụ đối chiếu ở `/reference/DiagramAI_Mockup.html`.
 

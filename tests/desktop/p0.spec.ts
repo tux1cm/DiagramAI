@@ -1,7 +1,7 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { captureReferenceView, compareReferenceViews } from '../helpers/visual-reference';
 import { blockSystemClipboard, connectHandles, dragBy, nodeButton, nodeModel, shortcut } from '../helpers/drawing';
@@ -19,14 +19,17 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
   const port = address.port;
   await new Promise<void>((done) => server.close(() => done()));
   const profile = mkdtempSync(join(process.env.LOCALAPPDATA!, 'Temp', 'opencode', 'diagramai-webview-test-'));
-  const app = spawn(executable, [], {
+  let debugPort = port, webProfile = profile;
+  const launch = () => spawn(executable, [], {
     env: {
       ...process.env,
-      WEBVIEW2_USER_DATA_FOLDER: profile,
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1`,
+      WEBVIEW2_USER_DATA_FOLDER: webProfile,
+      DIAGRAMAI_TEST_DATA_DIR: join(profile, 'data'),
+      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort} --remote-debugging-address=127.0.0.1`,
     },
     stdio: 'ignore',
   });
+  let app = launch();
   let launchError: Error | undefined;
   app.on('error', (error) => { launchError = error; });
   const window = (action: string, width?: number, height?: number) => {
@@ -120,7 +123,7 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     } else {
       testInfo.annotations.push({ type: 'api', description: 'Not configured in this build; no live API assertion.' });
     }
-    page.once('dialog', async (dialog) => { expect(dialog.type()).toBe('beforeunload'); await dialog.accept(); });
+    await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await page.reload();
     await expect(page.locator('.react-flow__node')).toHaveCount(2);
     await page.getByRole('link', { name: '← Về trình vẽ' }).click();
@@ -160,6 +163,53 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await expect(page.locator('[data-node]')).toHaveCount(3); await expect(page.locator('[data-duplicate-preview]')).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('webview2-ctrl-corner.png') });
     await shortcut(page, 'Control+z'); expect(await nodeGeometry(resizeSource)).toEqual(beforeRatio);
+    await expect(page.locator('.top-status')).toHaveText('Đã lưu trên máy');
+    const persistedIds = await page.locator('[data-node]').evaluateAll((elements) => elements.map((element) => element.getAttribute('data-node')));
+    await page.reload();
+    await expect(page.locator('[data-node]')).toHaveCount(3);
+    expect(await page.locator('[data-node]').evaluateAll((elements) => elements.map((element) => element.getAttribute('data-node')))).toEqual(persistedIds);
+    await browser.close(); browser = undefined;
+    app.kill(); await new Promise<void>((done) => { if (app.exitCode !== null) done(); else app.once('exit', () => done()); });
+    const restartServer = createServer(); await new Promise<void>((done) => restartServer.listen(0, '127.0.0.1', done));
+    const restartAddress = restartServer.address(); if (!restartAddress || typeof restartAddress === 'string') throw new Error('No restart port');
+    debugPort = restartAddress.port; await new Promise<void>((done) => restartServer.close(() => done()));
+    // A fresh WebView profile proves recovery is from SQLite, not the browser cache.
+    webProfile = join(profile, 'restart-webview'); app = launch();
+    await expect.poll(() => fetch(`http://127.0.0.1:${debugPort}/json/version`).then((response) => response.ok).catch(() => false), { timeout: 45000 }).toBe(true);
+    browser = await playwright.chromium.connectOverCDP(`http://127.0.0.1:${debugPort}`);
+    const reopened = browser.contexts()[0].pages()[0];
+    reopened.on('pageerror', (error) => errors.push(error.message));
+    await expect(reopened.locator('[data-node]')).toHaveCount(3);
+    expect(await reopened.locator('[data-node]').evaluateAll((elements) => elements.map((element) => element.getAttribute('data-node')))).toEqual(persistedIds);
+    await expect(reopened.locator('.top-status')).toHaveText('Đã lưu trên máy');
+    await reopened.getByRole('button', { name: 'Sơ đồ', exact: true }).click();
+    await expect(reopened.getByRole('dialog')).toContainText('SQLite');
+    await reopened.screenshot({ path: testInfo.outputPath('webview2-p4-restarted.png') });
+    await reopened.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await reopened.getByRole('button', { name: 'Lưu file', exact: true }).click();
+    const fileDialog = (fileName = 'native.diagramai') => execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', resolve('scripts/desktop-file-dialog.ps1'), '-ProcessId', String(app.pid), '-TestDirectory', profile, '-FileName', fileName], { encoding: 'utf8', timeout: 30000 });
+    fileDialog();
+    await expect(reopened.locator('.toast')).toContainText('Đã ghi file');
+    expect(JSON.parse(readFileSync(join(profile, 'native.diagramai'), 'utf8')).nodes).toHaveLength(3);
+    const originalFile = readFileSync(join(profile, 'native.diagramai'), 'utf8');
+    await reopened.locator('.shape-tile[data-shape=rect]').click();
+    await expect(reopened.locator('[data-node]')).toHaveCount(4);
+    await expect(reopened.locator('.top-status')).toHaveText('Đã lưu trên máy');
+    expect(readFileSync(join(profile, 'native.diagramai'), 'utf8')).toBe(originalFile);
+    await reopened.getByRole('button', { name: 'Lưu file', exact: true }).click();
+    await expect.poll(() => JSON.parse(readFileSync(join(profile, 'native.diagramai'), 'utf8')).nodes.length).toBe(4);
+    await reopened.getByRole('button', { name: 'Mở file', exact: true }).click(); fileDialog();
+    await expect(reopened.locator('.project-name')).toContainText('(bản nhập)');
+    await expect(reopened.locator('[data-node]')).toHaveCount(4);
+    for (const kind of ['svg', 'png', 'pdf']) {
+      await reopened.getByRole('button', { name: 'Xuất SVG', exact: true }).click();
+      await reopened.getByRole('combobox', { name: 'Định dạng xuất', exact: true }).selectOption(kind);
+      await reopened.getByRole('button', { name: 'Chọn nơi lưu và xuất', exact: true }).click(); fileDialog(`native.${kind}`);
+      await expect.poll(() => { try { return readFileSync(join(profile, `native.${kind}`)).length; } catch { return 0; } }).toBeGreaterThan(100);
+      if (kind === 'pdf') expect(readFileSync(join(profile, 'native.pdf'), 'utf8')).toContain('/FontFile2');
+      await reopened.getByRole('button', { name: 'Đóng', exact: true }).click();
+    }
+    expect(errors).toEqual([]);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();
