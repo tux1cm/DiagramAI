@@ -3,13 +3,15 @@ import { createNode, resizeWithRatio, SHAPE_DEFINITIONS, type ResizeCorner } fro
 
 describe('proportional corner resize', () => {
   for (const corner of ['top.left', 'top.right', 'bottom.left', 'bottom.right'] as ResizeCorner[]) {
-    for (const grow of [true, false]) it(`${corner} ${grow ? 'grows' : 'shrinks'} with opposite corner and ratio fixed`, () => {
+    for (const grow of [true, false]) it(`${corner} ${grow ? 'grows' : 'shrinks'} with center and ratio fixed`, () => {
       const node = createNode('rect', 100, 200), factor = grow ? 1 : -1;
       const result = resizeWithRatio(node, corner, { x: (corner.includes('left') ? -45 : 45) * factor, y: (corner.includes('top') ? -9 : 9) * factor });
       expect(result.width / result.height).toBeCloseTo(node.width / node.height, 10);
       expect(result.width > node.width).toBe(grow);
-      expect(result.x + (corner.includes('left') ? result.width : 0)).toBeCloseTo(node.x + (corner.includes('left') ? node.width : 0), 10);
-      expect(result.y + (corner.includes('top') ? result.height : 0)).toBeCloseTo(node.y + (corner.includes('top') ? node.height : 0), 10);
+      expect(result.x + result.width / 2).toBeCloseTo(node.x + node.width / 2, 10);
+      expect(result.y + result.height / 2).toBeCloseTo(node.y + node.height / 2, 10);
+      expect(node.x - result.x).toBeCloseTo((result.width - node.width) / 2, 10);
+      expect(node.y - result.y).toBeCloseTo((result.height - node.height) / 2, 10);
       expect(node.x).toBe(100); expect(node.y).toBe(200);
     });
   }
@@ -19,7 +21,16 @@ describe('proportional corner resize', () => {
     const large = resizeWithRatio(node, 'top.left', { x: -10000, y: -10000 });
     expect(small.width).toBeGreaterThanOrEqual(minimum.width); expect(small.height).toBeGreaterThanOrEqual(minimum.height);
     expect(large.width).toBeLessThanOrEqual(4096); expect(large.height).toBeLessThanOrEqual(4096);
-    for (const result of [small, large]) expect(result.width / result.height).toBeCloseTo(node.width / node.height, 10);
+    for (const result of [small, large]) {
+      expect(result.width / result.height).toBeCloseTo(node.width / node.height, 10);
+      expect(result.x + result.width / 2).toBeCloseTo(node.x + node.width / 2, 10);
+      expect(result.y + result.height / 2).toBeCloseTo(node.y + node.height / 2, 10);
+    }
+  });
+  it('moving a corner by its center-to-corner vector doubles the size around the same center', () => {
+    const node = createNode('rect', 100, 200);
+    const result = resizeWithRatio(node, 'bottom.right', { x: node.width / 2, y: node.height / 2 });
+    expect(result).toEqual({ x: node.x - node.width / 2, y: node.y - node.height / 2, width: node.width * 2, height: node.height * 2 });
   });
   it('has no jump for zero movement and rejects nonfinite input', () => {
     const node = createNode('round', 100, 200);

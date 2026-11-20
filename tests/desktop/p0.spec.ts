@@ -156,6 +156,7 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await cornerDrag(page, resizeSource, 'bottom.right', 40, 8);
     const afterRatio = await nodeGeometry(resizeSource);
     expect(afterRatio.width).toBeGreaterThan(beforeRatio.width); expect(afterRatio.width / afterRatio.height).toBeCloseTo(beforeRatio.width / beforeRatio.height, 6);
+    expect(afterRatio.x + afterRatio.width / 2).toBeCloseTo(beforeRatio.x + beforeRatio.width / 2, 5); expect(afterRatio.y + afterRatio.height / 2).toBeCloseTo(beforeRatio.y + beforeRatio.height / 2, 5);
     await expect(page.locator('[data-node]')).toHaveCount(3); await expect(page.locator('[data-duplicate-preview]')).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath('webview2-ctrl-corner.png') });
     await shortcut(page, 'Control+z'); expect(await nodeGeometry(resizeSource)).toEqual(beforeRatio);

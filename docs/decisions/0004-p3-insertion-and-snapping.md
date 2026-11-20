@@ -21,3 +21,7 @@ Giới hạn: bbox avoidance không phải outline routing hoàn hảo cho mọi
 ## Bổ sung Ctrl+kéo nút góc — 2026-11-20
 
 Ctrl trên thân hình vẫn nhân đôi; Ctrl trên resize handle góc của hình đã chọn khóa tỷ lệ chỉ cho gesture đó. RF/D3 mặc định không khởi động resize với Ctrl-mousedown nên adapter dùng pointer capture, không phát mouse event giả. Domain helper `resizeWithRatio` chiếu delta world-space lên đường chéo góc, dùng một scale cho width/height và clamp min/max cùng scale. Góc đối diện cố định; không sửa style/font/edges. Draft geometry và commit sử dụng interaction/history có sẵn, một Undo. Resize thường vẫn do RF xử lý và tự do như trước; Escape/pointercancel/blur hủy draft, không commit lại khi pointer-up.
+
+### Đính chính theo phản hồi người dùng
+
+Yêu cầu đúng là **tâm cố định**, không phải góc đối diện cố định như bản đầu. Chiếu delta lên đường chéo từ tâm đến góc (nửa width/height), scale cả hai chiều rồi tính `x = centerX - width/2`, `y = centerY - height/2`. Min/max vẫn dùng cùng scale. Tests phải kiểm tra center và các phía đối diện cùng di chuyển, không chỉ tỷ lệ hoặc cạnh nối.

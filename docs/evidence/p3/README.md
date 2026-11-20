@@ -16,5 +16,7 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `ctrl-corner-resize.png`: Ctrl+kéo nút góc giữ tỷ lệ, không nhân đôi, cạnh vẫn bám hình; assertions kiểm tra trước pointer-up, góc đối diện, font, Undo/Redo. Bộ bổ sung chạy cả bốn góc, giới hạn min và zoom 50/200% trên 3 viewport.
 - `webview2-ctrl-corner.png`: resize tỷ lệ thật trong bản cài Windows, không tăng node count và một Undo trả đúng geometry ban đầu. Log/manifest hiện trỏ đến bộ cài có đủ hai cử chỉ Ctrl.
 - `live-*-pages-ctrl-corner.png`: Ctrl-corner resize trên Pages thật sau deploy `1c7b24c`, cả 3 viewport; kiểm tra tỷ lệ, không thêm node/cạnh và Undo đúng geometry.
+- `ctrl-corner-centered.png`: bản sửa theo phản hồi — thu/phóng **từ tâm cố định**, không khóa góc đối diện như ảnh/bản Ctrl-corner trước đó. Tests mới kiểm tra chính center và hai phía cùng co/giãn.
+- `webview2-ctrl-corner-centered.png`: native proof cho cùng bản sửa từ tâm; log/manifest hiện trỏ bộ cài này, ảnh Ctrl-corner cũ giữ làm lịch sử.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.

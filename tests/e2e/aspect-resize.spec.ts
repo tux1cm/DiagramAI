@@ -3,7 +3,7 @@ import { clearGraph, nodeModel, ready, shortcut } from '../helpers/drawing';
 import { cornerDrag, nodeGeometry, type Corner } from '../helpers/resize';
 
 for (const corner of ['top.left', 'top.right', 'bottom.left', 'bottom.right'] as Corner[]) {
-  test(`Ctrl-resize ${corner} preserves ratio and opposite corner, keeps edges/font, and undoes once`, async ({ page }, testInfo) => {
+  test(`Ctrl-resize ${corner} preserves ratio and center, keeps edges/font, and undoes once`, async ({ page }, testInfo) => {
     await page.goto('./'); await ready(page);
     const id = (await nodeModel(page, 'Tiếp nhận vật tư').getAttribute('data-node'))!, node = page.locator(`[data-node="${id}"]`);
     await node.click(); const before = await nodeGeometry(node);
@@ -13,8 +13,10 @@ for (const corner of ['top.left', 'top.right', 'bottom.left', 'bottom.right'] as
     await expect(node).not.toHaveAttribute('data-width', String(before.width));
     const live = await nodeGeometry(node);
     expect(live.width / live.height).toBeCloseTo(before.width / before.height, 6);
-    expect(live.x + (corner.includes('left') ? live.width : 0)).toBeCloseTo(before.x + (corner.includes('left') ? before.width : 0), 5);
-    expect(live.y + (corner.includes('top') ? live.height : 0)).toBeCloseTo(before.y + (corner.includes('top') ? before.height : 0), 5);
+    expect(live.x + live.width / 2).toBeCloseTo(before.x + before.width / 2, 5);
+    expect(live.y + live.height / 2).toBeCloseTo(before.y + before.height / 2, 5);
+    expect(live.x).toBeLessThan(before.x); expect(live.y).toBeLessThan(before.y);
+    expect(live.x + live.width).toBeGreaterThan(before.x + before.width); expect(live.y + live.height).toBeGreaterThan(before.y + before.height);
     await expect(page.locator('[data-duplicate-preview]')).toHaveCount(0); await expect(page.locator('[data-node]')).toHaveCount(6);
     await expect(edge).toHaveAttribute('data-edge', edgeId!); await expect(edge).toHaveAttribute('data-source-handle', 'bottom');
     await expect(edge.locator('.react-flow__edge-path')).not.toHaveAttribute('d', path!);
@@ -38,6 +40,7 @@ test('ratio resize shrinks to shape minimums without distortion; the next normal
   const minimum = await nodeGeometry(node);
   expect(minimum.width).toBeGreaterThanOrEqual(50); expect(minimum.height).toBeGreaterThanOrEqual(90);
   expect(minimum.width / minimum.height).toBeCloseTo(before.width / before.height, 6);
+  expect(minimum.x + minimum.width / 2).toBeCloseTo(before.x + before.width / 2, 5); expect(minimum.y + minimum.height / 2).toBeCloseTo(before.y + before.height / 2, 5);
   expect(minimum.width).toBeLessThan(before.width); await expect(page.locator('.toast')).toHaveCount(0);
   await shortcut(page, 'Control+z'); expect(await nodeGeometry(node)).toEqual(before);
   await cornerDrag(page, node, 'bottom.right', 60, 10, false);
@@ -69,5 +72,6 @@ for (const zoom of [50, 200]) test(`Ctrl-corner ratio is independent of ${zoom}%
   await cornerDrag(page, node, 'bottom.right', 45, 8);
   const after = await nodeGeometry(node);
   expect(after.width).toBeGreaterThan(before.width); expect(after.width / after.height).toBeCloseTo(before.width / before.height, 6);
+  expect(after.x + after.width / 2).toBeCloseTo(before.x + before.width / 2, 5); expect(after.y + after.height / 2).toBeCloseTo(before.y + before.height / 2, 5);
   await shortcut(page, 'Control+z'); expect(await nodeGeometry(node)).toEqual(before);
 });

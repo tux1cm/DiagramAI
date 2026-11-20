@@ -1,5 +1,10 @@
 # Changelog
 
+## P3 correction — Ctrl+kéo góc thu/phóng từ tâm
+
+- Sửa cách hiểu sai: tâm hình phải cố định, các phía đối diện cùng co/giãn, không cố định góc đối diện như bản trước. Giữ tỷ lệ rộng/cao, giới hạn min/max và Undo như cũ.
+- Kiểm thử bổ sung bất biến tâm trên bốn góc, grow/shrink, min/max, zoom, native và live; kéo góc không Ctrl vẫn tự do.
+
 ## P3 follow-up — Ctrl+kéo nút góc giữ tỷ lệ
 
 - Chọn hình rồi Ctrl+kéo một trong bốn góc để resize tỷ lệ rộng/cao, giữ góc đối diện và cỡ chữ. Kéo góc không Ctrl vẫn tự do; Ctrl+kéo thân vẫn nhân đôi.

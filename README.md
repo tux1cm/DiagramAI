@@ -17,7 +17,7 @@ Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn �
 
 **Ctrl+kéo nhân đôi:** giữ Ctrl trước khi kéo hình/nhóm đã chọn; bản gốc giữ nguyên, thả chuột để tạo bản sao. Một Ctrl+Z hoàn tác; Esc hủy khi đang kéo. Ctrl+click vẫn dùng để đa chọn. Thả một bản sao lên cạnh sáng tím sẽ nhân đôi và chèn trong cùng một Undo; dữ liệu vẫn chỉ nằm trong bộ nhớ.
 
-**Ctrl+kéo góc giữ tỷ lệ:** chọn hình trước, giữ Ctrl rồi kéo một nút góc để phóng to/thu nhỏ đều; góc đối diện giữ nguyên. Kéo góc không Ctrl vẫn resize tự do. Không đổi cỡ chữ hoặc nhân đôi hình; cạnh nối tiếp tục bám neo, một Ctrl+Z hoàn tác, Esc hủy trong lúc kéo.
+**Ctrl+kéo góc từ tâm:** chọn hình trước, giữ Ctrl rồi kéo một nút góc để phóng to/thu nhỏ đều quanh **tâm hình cố định**; các phía đối diện cùng giãn/co, giữ tỷ lệ rộng/cao. Kéo góc không Ctrl vẫn resize tự do. Không đổi cỡ chữ hoặc nhân đôi hình; cạnh nối tiếp tục bám neo, một Ctrl+Z hoàn tác, Esc hủy trong lúc kéo.
 
 ```powershell
 npm run prepare:reference

@@ -1,5 +1,13 @@
 # P3 — Smart Connector, chèn hình và snap
 
+## Sửa theo phản hồi: thu/phóng từ tâm — 2026-11-20
+
+Bản Ctrl-corner trước đã hiểu sai yêu cầu: khóa góc đối diện thay vì tâm hình. Đã sửa để **tâm giữ nguyên**, cả hai phía cùng giãn/co, đồng thời giữ tỷ lệ; local Web/Desktop PASS, đang chuẩn bị deploy. Không thay Ctrl+kéo thân nhân đôi hoặc kéo góc thường. Các bằng chứng Ctrl-corner trước đây ở dưới là lịch sử của bản chưa đúng kỳ vọng này.
+
+- Lint/typecheck và **137/137 unit PASS**: center invariants trên bốn góc, grow/shrink, min/max và kéo đúng center-to-corner vector thì kích thước tăng gấp đôi quanh cùng tâm.
+- **42/42 E2E PASS** trên 3 viewport: 24 ca resize (thêm kiểm tra tâm và cả hai phía cùng di chuyển) + 18 ca Ctrl+kéo nhân đôi. Assertions center có ở cả ca clamp, zoom 50/200%, native và live.
+- Windows build và bản cài WebView2 **PASS** với assertion tâm trước/sau resize và một Undo phục hồi geometry. Native visual vẫn **392/316/378 pixels**, không thêm mask.
+
 ## Bổ sung cuối: Ctrl+kéo nút góc — 2026-11-20
 
 Đã PASS Web/Desktop, CI/Pages và live theo yêu cầu bổ sung cuối của chủ dự án; site và bộ cài có đủ Ctrl+kéo thân nhân đôi và Ctrl+kéo góc giữ tỷ lệ. Chưa chuyển P4.
@@ -70,9 +78,9 @@ ADR: [`decisions/0004-p3-insertion-and-snapping.md`](decisions/0004-p3-insertion
 
 ## Artifact local
 
-- Bộ cài mới có Ctrl+kéo thân và Ctrl+kéo góc `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,063,010 bytes**, SHA-256 `83e6c8681a701ad8b1bf07da8dd345dcc54dd37f8ad8e97d94a97c3cef776fe4`.
+- Bộ cài mới có Ctrl+kéo thân và Ctrl+kéo góc từ tâm `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,062,886 bytes**, SHA-256 `f3a04b15718338df3f496f1388750e4b8a405765929050372189418f58626235`.
 - Chạy không setup: `apps/desktop/src-tauri/target/release/diagramai.exe`. Static Web: `File/Web/`. Output trước đã archive nguyên vẹn trong `File/Previous/`.
-- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS sau Ctrl-corner **582.39 kB** (gzip 180.34 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
+- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS sau sửa Ctrl-corner từ tâm **582.41 kB** (gzip 180.36 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
 
 ## Test nhanh
 

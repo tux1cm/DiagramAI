@@ -85,6 +85,7 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   await cornerDrag(page, ratioSource, 'bottom.right', 40, 8);
   const afterRatio = await nodeGeometry(ratioSource);
   expect(afterRatio.width).toBeGreaterThan(beforeRatio.width); expect(afterRatio.width / afterRatio.height).toBeCloseTo(beforeRatio.width / beforeRatio.height, 6);
+  expect(afterRatio.x + afterRatio.width / 2).toBeCloseTo(beforeRatio.x + beforeRatio.width / 2, 5); expect(afterRatio.y + afterRatio.height / 2).toBeCloseTo(beforeRatio.y + beforeRatio.height / 2, 5);
   await expect(page.locator('[data-node]')).toHaveCount(2); await expect(page.locator('[data-edge]')).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath('pages-ctrl-corner.png') });
   await shortcut(page, 'Control+z'); expect(await nodeGeometry(ratioSource)).toEqual(beforeRatio);
