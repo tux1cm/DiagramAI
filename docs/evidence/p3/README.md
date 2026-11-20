@@ -18,5 +18,6 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `live-*-pages-ctrl-corner.png`: Ctrl-corner resize trên Pages thật sau deploy `1c7b24c`, cả 3 viewport; kiểm tra tỷ lệ, không thêm node/cạnh và Undo đúng geometry.
 - `ctrl-corner-centered.png`: bản sửa theo phản hồi — thu/phóng **từ tâm cố định**, không khóa góc đối diện như ảnh/bản Ctrl-corner trước đó. Tests mới kiểm tra chính center và hai phía cùng co/giãn.
 - `webview2-ctrl-corner-centered.png`: native proof cho cùng bản sửa từ tâm; log/manifest hiện trỏ bộ cài này, ảnh Ctrl-corner cũ giữ làm lịch sử.
+- `live-*-pages-ctrl-corner-centered.png`: site thật sau deploy `8f07cfe`, cả 3 viewport, với assertions center trước/sau và Undo. Không dùng ảnh bản góc đối diện cũ làm bằng chứng cho yêu cầu tâm cố định.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.

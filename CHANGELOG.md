@@ -4,6 +4,7 @@
 
 - Sửa cách hiểu sai: tâm hình phải cố định, các phía đối diện cùng co/giãn, không cố định góc đối diện như bản trước. Giữ tỷ lệ rộng/cao, giới hạn min/max và Undo như cũ.
 - Kiểm thử bổ sung bất biến tâm trên bốn góc, grow/shrink, min/max, zoom, native và live; kéo góc không Ctrl vẫn tự do.
+- Commit `8f07cfe` đã deploy: 137 unit tests, 42 ca resize/duplicate local, full CI và 3/3 live PASS với assertion tâm hình. Bộ cài Windows đã cập nhật và kiểm thử.
 
 ## P3 follow-up — Ctrl+kéo nút góc giữ tỷ lệ
 

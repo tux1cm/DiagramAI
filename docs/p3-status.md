@@ -2,11 +2,12 @@
 
 ## Sửa theo phản hồi: thu/phóng từ tâm — 2026-11-20
 
-Bản Ctrl-corner trước đã hiểu sai yêu cầu: khóa góc đối diện thay vì tâm hình. Đã sửa để **tâm giữ nguyên**, cả hai phía cùng giãn/co, đồng thời giữ tỷ lệ; local Web/Desktop PASS, đang chuẩn bị deploy. Không thay Ctrl+kéo thân nhân đôi hoặc kéo góc thường. Các bằng chứng Ctrl-corner trước đây ở dưới là lịch sử của bản chưa đúng kỳ vọng này.
+Bản Ctrl-corner trước đã hiểu sai yêu cầu: khóa góc đối diện thay vì tâm hình. Đã sửa để **tâm giữ nguyên**, cả hai phía cùng giãn/co, đồng thời giữ tỷ lệ; Web/Desktop, CI/Pages và live PASS. Không thay Ctrl+kéo thân nhân đôi hoặc kéo góc thường. Các bằng chứng Ctrl-corner trước đây ở dưới là lịch sử của bản chưa đúng kỳ vọng này.
 
 - Lint/typecheck và **137/137 unit PASS**: center invariants trên bốn góc, grow/shrink, min/max và kéo đúng center-to-corner vector thì kích thước tăng gấp đôi quanh cùng tâm.
 - **42/42 E2E PASS** trên 3 viewport: 24 ca resize (thêm kiểm tra tâm và cả hai phía cùng di chuyển) + 18 ca Ctrl+kéo nhân đôi. Assertions center có ở cả ca clamp, zoom 50/200%, native và live.
 - Windows build và bản cài WebView2 **PASS** với assertion tâm trước/sau resize và một Undo phục hồi geometry. Native visual vẫn **392/316/378 pixels**, không thêm mask.
+- Commit `8f07cfe`: [CI 44650883514](https://github.com/tux1cm/DiagramAI/actions/runs/44650883514) và [Pages 44650898781](https://github.com/tux1cm/DiagramAI/actions/runs/44650898781) **SUCCESS**; full suite trên CI PASS. Live **3/3 PASS**, kiểm tra chính tọa độ tâm trước/sau resize trên site thật ở 1366/1920/1280, Ctrl+kéo nhân đôi và Undo vẫn đúng.
 
 ## Bổ sung cuối: Ctrl+kéo nút góc — 2026-11-20
 
