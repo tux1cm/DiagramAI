@@ -13,3 +13,7 @@ Ngày: 2026-11-19. Chủ dự án đã xác nhận P2 OK và yêu cầu P3. Khô
 9. Esc/pointercancel/window blur hủy draft đang kéo và xóa cues; không commit insertion sau cancel. Click không di chuyển không kích hoạt insertion.
 
 Giới hạn: bbox avoidance không phải outline routing hoàn hảo cho mọi shape; sơ đồ quá chật vẫn cần người dùng giãn node hoặc đổi neo. Chèn chỉ căn tâm C tại điểm trên cạnh, không tự dồn toàn sơ đồ. Lưu/mở file thật và khôi phục sau đóng/reload vẫn thuộc P4.
+
+## Bổ sung Ctrl+kéo — 2026-11-20
+
+`prepareDuplicateDrag`/`moveDuplicateDrag` tạo kế hoạch UUID ổn định và translate world coordinates, tái sử dụng fragment/remap nhưng không đọc/ghi clipboard. Pointer gesture được adapter bắt trước RF drag; preview không phải domain node, không thay đổi vị trí/cạnh bản gốc hoặc history. Chỉ pointer-up trong canvas mới commit với expectedRevision. Nhóm/đa chọn chỉ copy cạnh nội bộ; một bản sao đơn có thể dùng `insert_node_on_edge` thay cho add để copy + split nguyên tử. Preview dùng RF-only ID riêng để không tái sử dụng cache handle bounds rỗng khi node thật xuất hiện. Ctrl+click không kéo vẫn toggle selection; modifier của copy được chốt ở pointer-down.

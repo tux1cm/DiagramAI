@@ -1,5 +1,12 @@
 # Changelog
 
+## P3 follow-up — Ctrl+kéo nhân đôi
+
+- Giữ Ctrl khi bắt đầu kéo hình để nhân đôi; bản gốc và cạnh của nó không di chuyển. Bản sao preview chưa vào document/history cho tới khi thả.
+- Sao chép được nhóm/đa chọn cùng cạnh nội bộ, không kéo theo cạnh nối ra ngoài và không thay clipboard. Ctrl+click vẫn đa chọn; click không kéo không nhân đôi.
+- Một Ctrl+Z hoàn tác cả lần sao chép hoặc sao chép + chèn lên cạnh. Escape/Ctrl+Z trong lúc kéo, pointercancel/blur hoặc thả ngoài canvas hủy preview.
+- Modifier được chốt lúc bắt đầu kéo; thả Ctrl sớm không biến thành kéo bản gốc. Snap, pan và zoom dùng world coordinates; ID ổn định khi Undo/Redo.
+
 ## 0.0.0 — 2026-11-19 — P3 Smart Connector technical PASS
 
 - Atomic InsertNodeOnEdge cho hình mới/tồn tại rời; highlight/hit-test nét SVG thật theo CSS pixels và pan/zoom.

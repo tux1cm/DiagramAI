@@ -10,5 +10,7 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `webview2-*.png`, `webview2-*-metrics.json`: native visual 3 viewport sau fit cùng camera. Các ảnh P2 controls/API giữ phần hồi quy.
 - `build.txt`, `release-manifest.json`: log Windows build thành công và hash bộ cài P3; không commit EXE hoặc secrets.
 - `live-*-pages-p3-insertion.png`: chèn khối trên Pages thật sau deploy `1aa9544`, 3 viewport; test kiểm tra highlight và Undo phục hồi cạnh UUID cũ. `live-*-pages-neon-health.png` giữ probe PostgreSQL/CORS thật.
+- `ctrl-drag-preview.png`: Ctrl+kéo trước pointer-up; bản gốc/cạnh vẫn ở chỗ cũ, bản sao mờ chưa được tính vào document/history. Ca kiểm thử còn xác nhận Ctrl+click, hủy, nhóm/clipboard, thả lên cạnh và pan/zoom 50/200%.
+- `webview2-ctrl-drag.png`: bản sao sau Ctrl+kéo trong bản cài thật ngày 2026-11-20; test kiểm tra bản gốc không đổi, không copy cạnh ra ngoài và một Undo xóa bản sao. Build log/manifest được cập nhật cho bản bổ sung này.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.

@@ -17,3 +17,5 @@
 .engine-host .snap-overlay line { stroke: #a879ef; stroke-width: 1; stroke-dasharray: 4 3; }
 .engine-host .insertion-point { fill: #fff; stroke: #7056ec; stroke-width: 3; }
 .engine-host .insertion-hint { position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%); z-index: 16; pointer-events: none; padding: 8px 12px; border: 1px solid #d7ccff; border-radius: 8px; background: #f6f2ff; color: #624cc5; font-size: 12px; white-space: nowrap; }
+.engine-host .duplicate-preview-node { pointer-events: none; }
+.engine-host .duplicate-preview { opacity: .72; outline: 1px dashed #7056ec; outline-offset: 3px; }

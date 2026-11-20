@@ -8,3 +8,4 @@ export * from './migration';
 export * from './insertion';
 export * from './snapping';
 export * from './routing';
+export * from './duplicate-drag';

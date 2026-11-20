@@ -4,7 +4,7 @@ import { PORTS, SHAPE_DEFINITIONS, type DiagramNode } from '@diagramai/diagram-c
 import { executeSafely, useEngine } from './context';
 import { Shape } from './Shape';
 
-export type FlowNode = Node<{ value: DiagramNode }, 'diagram'>;
+export type FlowNode = Node<{ value: DiagramNode; preview?: boolean }, 'diagram'>;
 const positions = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
 function linesFor(text: string, width: number, fontSize: number): string[] {
   const limit = Math.max(4, Math.floor(width / (fontSize * .6)));
@@ -43,8 +43,8 @@ export function DiagramNodeView({ id, data, selected, isConnectable }: NodeProps
       store.updateInteraction([{ type: 'geometry', values: [{ id, x, y, width, height }] }]);
     } catch { store.cancelInteraction(); onError('Kích thước hình không hợp lệ.'); }
   };
-  return <div data-node={id} data-type={node.type} data-x={node.x} data-y={node.y} data-width={node.width} data-height={node.height} className={`engine-node ${selected ? 'selected' : ''}`} onDoubleClick={(event) => { event.stopPropagation(); cancelled.current = false; setDraft(node.text); setEditing(true); }}>
-    <NodeResizer isVisible={selected && !editing} minWidth={definition.minSize.width} minHeight={definition.minSize.height} color="#546df4"
+  return <div data-node={data.preview ? undefined : id} data-duplicate-preview={data.preview ? node.id : undefined} data-type={node.type} data-x={node.x} data-y={node.y} data-width={node.width} data-height={node.height} className={`engine-node ${data.preview ? 'duplicate-preview' : selected ? 'selected' : ''}`} onDoubleClick={(event) => { event.stopPropagation(); if (data.preview) return; cancelled.current = false; setDraft(node.text); setEditing(true); }}>
+    <NodeResizer isVisible={selected && !editing && !data.preview} minWidth={definition.minSize.width} minHeight={definition.minSize.height} color="#546df4"
       handleStyle={{ width: 8, height: 8, borderRadius: 2 }} lineStyle={{ borderStyle: 'dashed', borderWidth: 1 }}
       onResizeStart={() => store.beginInteraction('Đổi kích thước')}
       onResize={(_event, values) => resize(values)} onResizeEnd={(_event, values) => { resize(values); store.finishInteraction(); }}/>
@@ -57,6 +57,6 @@ export function DiagramNodeView({ id, data, selected, isConnectable }: NodeProps
       style={{ left: region.x, top: Math.max(0, region.y), width: Math.max(60, region.width), height: Math.max(34, region.height), fontFamily: node.style.fontFamily, fontSize: node.style.fontSize, color: node.style.textColor }}
       onChange={(event) => setDraft(event.target.value)} onBlur={commitText} onPointerDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => { event.stopPropagation(); if (event.nativeEvent.isComposing) return; if (event.key === 'Escape') { event.preventDefault(); cancelled.current = true; setEditing(false); } else if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); commitText(); } }}/>} 
-    {PORTS.map((port) => <Handle key={port} id={port} type="source" position={positions[port]} isConnectable={isConnectable && !editing} aria-label={`Neo ${port}`} className={`engine-port port-${port}`}/>)}
+    {!data.preview && PORTS.map((port) => <Handle key={port} id={port} type="source" position={positions[port]} isConnectable={isConnectable && !editing} aria-label={`Neo ${port}`} className={`engine-port port-${port}`}/>)}
   </div>;
 }

@@ -15,6 +15,8 @@ Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không ifr
 
 Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn đoán React Flow/Neon từ P0. Probe API thành công không phải đồng bộ sơ đồ. Mockup gốc chỉ phục vụ đối chiếu ở `/reference/DiagramAI_Mockup.html`.
 
+**Ctrl+kéo nhân đôi:** giữ Ctrl trước khi kéo hình/nhóm đã chọn; bản gốc giữ nguyên, thả chuột để tạo bản sao. Một Ctrl+Z hoàn tác; Esc hủy khi đang kéo. Ctrl+click vẫn dùng để đa chọn. Thả một bản sao lên cạnh sáng tím sẽ nhân đôi và chèn trong cùng một Undo; dữ liệu vẫn chỉ nằm trong bộ nhớ.
+
 ```powershell
 npm run prepare:reference
 npm run check

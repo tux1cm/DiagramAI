@@ -73,5 +73,11 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   await page.screenshot({ path: testInfo.outputPath('pages-p3-insertion.png') });
   await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
   await expect(page.locator(`[data-edge="${edgeId}"]`)).toHaveCount(1);
+  const source = page.locator('[data-node]').first(), x = await source.getAttribute('data-x');
+  await page.keyboard.down('Control'); await dragBy(page, source, 130, 70); await page.keyboard.up('Control');
+  await expect(page.locator('[data-node]')).toHaveCount(3); await expect(page.locator('[data-edge]')).toHaveCount(1);
+  await expect(page.locator('[data-node]').first()).toHaveAttribute('data-x', x!);
+  await page.screenshot({ path: testInfo.outputPath('pages-ctrl-drag.png') });
+  await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
   expect(errors).toEqual([]);
 });

@@ -1,8 +1,8 @@
 ﻿{
-    "builtAt":  "2026-11-19T06:49:10.6449873Z",
+    "builtAt":  "2026-11-20T00:08:29.4592313Z",
     "version":  "0.0.0",
-    "bytes":  2062355,
+    "bytes":  2062149,
     "installer":  "DiagramAI_Setup_x64.exe",
-    "sha256":  "89d099e36d9bf4a6dac248801a9a7483d186ae36c3f5057809c7f4c0771775a6",
+    "sha256":  "5efe24ae174d6cb8d097cf61d479c71089b3ceea59d0bab3823068668e080462",
     "phase":  "P3 smart connector - not v1.0"
 }

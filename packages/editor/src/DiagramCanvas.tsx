@@ -8,6 +8,7 @@ import { EngineContext, executeSafely, useDiagram } from './context';
 import { DiagramNodeView, type FlowNode } from './DiagramNode';
 import { DiagramEdgeView, type FlowEdge } from './DiagramEdge';
 import { hitTestEdges, type EdgeHit } from './hit-testing';
+import { useDuplicateDrag } from './useDuplicateDrag';
 
 export type EditorTool = 'select' | 'pan' | 'link' | 'text';
 export interface CanvasHandle { zoomTo: (zoom: number) => void; fit: () => void; addShape: (shape: NodeShape) => void }
@@ -30,6 +31,8 @@ function CanvasInner(props: CanvasProps & { canvasRef: ForwardedRef<CanvasHandle
   const [dragIds, setDragIds] = useState<string[]>([]);
   const dragging = useRef<{ ids: string[]; cancelled: boolean } | null>(null);
   const clearCues = useCallback(() => { setInsertion(null); setGuides([]); }, []);
+  const duplicateCues = useCallback((hit: EdgeHit | null, lines: SnapGuide[]) => { setInsertion(hit); setGuides(lines); }, []);
+  const duplicate = useDuplicateDrag({ store, host, enabled: props.tool === 'select' && !space, snap, onError, onCues: duplicateCues });
   const measured = useNodesInitialized();
   const execute = useCallback((commands: DiagramCommand[], label: string) => executeSafely(store, commands, label, onError), [store, onError]);
   const fit = useCallback(() => {
@@ -72,15 +75,19 @@ function CanvasInner(props: CanvasProps & { canvasRef: ForwardedRef<CanvasHandle
     zoomTo: (zoom) => { void flow.zoomTo(Math.max(.2, Math.min(3, zoom)), { duration: 0 }).then(() => onZoom(flow.getZoom())); },
     addShape: (shape) => { const bounds = host.current?.getBoundingClientRect(); if (bounds) { const offset = additions.current++ % 5 * 20; addAt(shape, { x: bounds.left + bounds.width / 2 + offset, y: bounds.top + bounds.height / 2 + offset }); } },
   }), [fit, flow, onZoom, addAt]);
-  const nodes: FlowNode[] = useMemo(() => document.nodes.map((node) => ({
-    id: node.id, type: 'diagram', position: { x: node.x, y: node.y }, data: { value: node },
+  const nodes: FlowNode[] = useMemo(() => [...document.nodes, ...duplicate.previews.filter((preview) => !document.nodes.some((node) => node.id === preview.id))].map((node) => ({
+    // A preview has no handles. Use a distinct RF-only key so the committed
+    // copy mounts with fresh handle measurements instead of cached empty bounds.
+    id: duplicate.previews.includes(node) ? `preview-${node.id}` : node.id, type: 'diagram', position: { x: node.x, y: node.y }, data: { value: node, preview: duplicate.previews.includes(node) },
     // Fixed-size SVG nodes have authoritative dimensions. Keep RF's controlled
     // measured field in the adapter, not in document/history, so initialization
     // and handle measurement do not keep resetting after every domain update.
     style: { width: node.width, height: node.height }, width: node.width, height: node.height, measured: { width: node.width, height: node.height },
-    selected: state.selection.nodeIds.includes(node.id), zIndex: node.zIndex,
-    ariaLabel: `Hình ${node.text || SHAPE_DEFINITIONS[node.type].name}`, ariaRole: 'button',
-  })), [document.nodes, state.selection.nodeIds]);
+    selected: state.selection.nodeIds.includes(node.id), zIndex: duplicate.previews.includes(node) ? 10001 : node.zIndex,
+    draggable: duplicate.previews.includes(node) ? false : undefined, selectable: duplicate.previews.includes(node) ? false : undefined, connectable: duplicate.previews.includes(node) ? false : undefined,
+    className: duplicate.previews.includes(node) ? 'duplicate-preview-node' : undefined,
+    ariaLabel: duplicate.previews.includes(node) ? undefined : `Hình ${node.text || SHAPE_DEFINITIONS[node.type].name}`, ariaRole: duplicate.previews.includes(node) ? 'presentation' : 'button',
+  })), [document.nodes, state.selection.nodeIds, duplicate.previews]);
   const edges: FlowEdge[] = useMemo(() => document.edges.map((edge) => ({
     id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle,
     type: 'diagram', data: { value: edge }, selected: state.selection.edgeIds.includes(edge.id), ariaLabel: `Đường nối ${edge.label || 'không nhãn'}`, ariaRole: 'button',
@@ -152,7 +159,8 @@ function CanvasInner(props: CanvasProps & { canvasRef: ForwardedRef<CanvasHandle
     if (execute([{ type: 'add_edges', edges: [edge] }], 'Nối hình')) store.select([], [edge.id]);
   };
   const context = useMemo(() => ({ store, onError, insertionEdgeId: insertion?.edgeId, routingExcludedNodeIds: dragIds }), [store, onError, insertion?.edgeId, dragIds]);
-  return <EngineContext.Provider value={context}><div id="canvasHost" className={`canvas-host engine-host tool-${props.tool}`} ref={host} data-insert-edge={insertion?.edgeId} data-ready={fitted && (measured || !nodes.length) ? 'true' : 'false'} tabIndex={0} aria-label="Vùng vẽ sơ đồ">
+  return <EngineContext.Provider value={context}><div id="canvasHost" className={`canvas-host engine-host tool-${props.tool}`} ref={host} data-insert-edge={insertion?.edgeId} data-ready={fitted && (measured || !nodes.length) ? 'true' : 'false'} tabIndex={0} aria-label="Vùng vẽ sơ đồ"
+    onPointerDownCapture={duplicate.start} onMouseDownCapture={(event) => { if (duplicate.active()) { event.preventDefault(); event.stopPropagation(); } }}>
     <div className="stage-header"><div className="stage-eyebrow">KHÔNG GIAN LÀM VIỆC</div><div className="stage-title">{document.title}</div><div className="stage-description">Kéo thả hình khối • nối thông minh • AI hỗ trợ</div></div>
     <ReactFlow<FlowNode, FlowEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       onInit={() => { frame.current = requestAnimationFrame(fit); }} onMove={(_event, view) => { props.onZoom(view.zoom); setViewport(view); }}
@@ -179,6 +187,7 @@ function CanvasInner(props: CanvasProps & { canvasRef: ForwardedRef<CanvasHandle
       : <line key="y" data-guide="y" y1={viewport.y + guide.position * viewport.zoom} y2={viewport.y + guide.position * viewport.zoom} x1={viewport.x + guide.start * viewport.zoom} x2={viewport.x + guide.end * viewport.zoom}/>)}
       {insertion && <circle className="insertion-point" cx={viewport.x + insertion.point.x * viewport.zoom} cy={viewport.y + insertion.point.y * viewport.zoom} r="8"/>}</svg>
     {insertion && <div className="insertion-hint" role="status">Thả để chèn vào đường nối · Ctrl+Z để hoàn tác</div>}
+    {!!duplicate.previews.length && !insertion && <div className="insertion-hint" role="status">Thả để nhân đôi · Esc để hủy</div>}
     <div className="floating-hint"><span className="kbd">Space</span> Di chuyển <span className="kbd">Ctrl+D</span> Nhân đôi <span className="kbd">Delete</span> Xóa</div>
     <div className="canvas-actions"><button className="circular" title="Khôi phục khung nhìn" onClick={fit}>{props.fitIcon ?? '↔'}</button><button className="circular" title="Hiện trợ lý AI" onClick={props.onAi}>{props.aiIcon ?? '✦'}</button></div>
   </div></EngineContext.Provider>;

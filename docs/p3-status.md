@@ -1,5 +1,17 @@
 # P3 — Smart Connector, chèn hình và snap
 
+## Bổ sung Ctrl+kéo — 2026-11-20
+
+Theo yêu cầu chốt P3: giữ Ctrl ở pointer-down rồi kéo để tạo bản sao. Đã PASS local Web/Desktop; đang chuẩn bị CI/deploy.
+
+- Preview tách khỏi domain: bản gốc/cạnh cũ giữ nguyên, footer/history không đếm preview như dữ liệu đã thêm.
+- Đa chọn/nhóm giữ offset, remap UUID và cạnh nội bộ; không copy cạnh ra ngoài hoặc thay clipboard cá nhân/nội bộ.
+- Thả vào canvas commit một transaction; nếu một bản sao được thả lên cạnh sáng tím thì copy + InsertNodeOnEdge cũng là một Undo.
+- Ctrl+click vẫn thêm/bỏ selection và không tạo history. Esc/Ctrl+Z khi đang kéo hủy bản sao, không Undo nhầm chỉnh sửa trước đó. Blur/pointercancel/thả ngoài canvas cũng hủy.
+- Preview dùng RF-only ID khác bản sao thật để tránh cache handle bounds rỗng khiến cạnh của bản sao không render. IDs domain giữ ổn định cho Undo/Redo.
+- Web: **18/18 ca Ctrl+kéo PASS** trên 3 viewport; full hồi quy subpath **112 PASS + 2 skip stress lặp có chủ đích**, visual vẫn **30/0/22 pixels**. Unit mới kiểm tra copy plan, nhóm/cạnh nội bộ, clipboard không đổi, stale/cap và atomic copy + insert; tổng **123 tests**.
+- `build.bat --no-pause` **PASS**, gồm lint/typecheck và 123/123 tests sau npm ci. Bản cài WebView2 **PASS** Ctrl+kéo/Undo, chèn cạnh và toàn bộ native smoke; visual vẫn **392/316/378 pixels** trên 3 viewport.
+
 Ngày: 2026-11-19. **P2 đã được chủ dự án xác nhận OK; P3 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live, chờ chủ dự án nghiệm thu. Chưa chuyển P4.**
 
 ## Phần triển khai
@@ -45,9 +57,9 @@ ADR: [`decisions/0004-p3-insertion-and-snapping.md`](decisions/0004-p3-insertion
 
 ## Artifact local
 
-- Bộ cài `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,062,355 bytes**, SHA-256 `89d099e36d9bf4a6dac248801a9a7483d186ae36c3f5057809c7f4c0771775a6`.
+- Bộ cài mới có Ctrl+kéo `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,062,149 bytes**, SHA-256 `5efe24ae174d6cb8d097cf61d479c71089b3ceea59d0bab3823068668e080462`.
 - Chạy không setup: `apps/desktop/src-tauri/target/release/diagramai.exe`. Static Web: `File/Web/`. Output trước đã archive nguyên vẹn trong `File/Previous/`.
-- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS **574.52 kB** (gzip 178.17 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
+- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS sau Ctrl+kéo **579.66 kB** (gzip 179.63 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
 
 ## Test nhanh
 

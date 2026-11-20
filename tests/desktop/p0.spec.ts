@@ -143,6 +143,13 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await expect(page.locator('[data-edge]')).toHaveCount(2);
     await shortcut(page, 'Control+z'); await expect(isolated).toHaveAttribute('data-x', isolatedX!);
     await expect(page.locator(`[data-edge="${edgeId}"]`)).toHaveCount(1);
+    const copySource = page.locator('[data-node]').first(), originalX = await copySource.getAttribute('data-x');
+    await page.keyboard.down('Control'); await dragBy(page, copySource, 130, 70); await page.keyboard.up('Control');
+    await expect(page.locator('[data-node]')).toHaveCount(4); await expect(page.locator('[data-edge]')).toHaveCount(1);
+    await expect(page.locator('[data-duplicate-preview]')).toHaveCount(0);
+    await expect(page.locator('[data-node]').first()).toHaveAttribute('data-x', originalX!);
+    await page.screenshot({ path: testInfo.outputPath('webview2-ctrl-drag.png') });
+    await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(3);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();
