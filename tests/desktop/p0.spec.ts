@@ -210,7 +210,8 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
       await reopened.getByRole('button', { name: 'Đóng', exact: true }).click();
     }
     expect(errors).toEqual([]);
-    expect(errors).toEqual([]);
+    window('close');
+    await expect.poll(() => app.exitCode, { timeout: 15000 }).not.toBeNull();
   } finally {
     await browser?.close();
     if (app.pid && app.exitCode === null) {
