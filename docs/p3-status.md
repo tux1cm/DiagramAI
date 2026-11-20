@@ -2,7 +2,7 @@
 
 ## Bổ sung Ctrl+kéo — 2026-11-20
 
-Theo yêu cầu chốt P3: giữ Ctrl ở pointer-down rồi kéo để tạo bản sao. Đã PASS local Web/Desktop; đang chuẩn bị CI/deploy.
+Theo yêu cầu chốt P3: giữ Ctrl ở pointer-down rồi kéo để tạo bản sao. Đã PASS Web/Desktop, CI/Pages và live; chưa chuyển P4.
 
 - Preview tách khỏi domain: bản gốc/cạnh cũ giữ nguyên, footer/history không đếm preview như dữ liệu đã thêm.
 - Đa chọn/nhóm giữ offset, remap UUID và cạnh nội bộ; không copy cạnh ra ngoài hoặc thay clipboard cá nhân/nội bộ.
@@ -11,6 +11,7 @@ Theo yêu cầu chốt P3: giữ Ctrl ở pointer-down rồi kéo để tạo b�
 - Preview dùng RF-only ID khác bản sao thật để tránh cache handle bounds rỗng khiến cạnh của bản sao không render. IDs domain giữ ổn định cho Undo/Redo.
 - Web: **18/18 ca Ctrl+kéo PASS** trên 3 viewport; full hồi quy subpath **112 PASS + 2 skip stress lặp có chủ đích**, visual vẫn **30/0/22 pixels**. Unit mới kiểm tra copy plan, nhóm/cạnh nội bộ, clipboard không đổi, stale/cap và atomic copy + insert; tổng **123 tests**.
 - `build.bat --no-pause` **PASS**, gồm lint/typecheck và 123/123 tests sau npm ci. Bản cài WebView2 **PASS** Ctrl+kéo/Undo, chèn cạnh và toàn bộ native smoke; visual vẫn **392/316/378 pixels** trên 3 viewport.
+- Commit `b53d950`: [CI 44643664111](https://github.com/tux1cm/DiagramAI/actions/runs/44643664111) và [Pages 44643682238](https://github.com/tux1cm/DiagramAI/actions/runs/44643682238) **SUCCESS**. Live **3/3 PASS**, có Ctrl+kéo tạo bản sao, giữ nguyên nguồn/cạnh và Undo trên site thật.
 
 Ngày: 2026-11-19. **P2 đã được chủ dự án xác nhận OK; P3 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live, chờ chủ dự án nghiệm thu. Chưa chuyển P4.**
 

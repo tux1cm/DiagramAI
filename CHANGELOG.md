@@ -6,6 +6,7 @@
 - Sao chép được nhóm/đa chọn cùng cạnh nội bộ, không kéo theo cạnh nối ra ngoài và không thay clipboard. Ctrl+click vẫn đa chọn; click không kéo không nhân đôi.
 - Một Ctrl+Z hoàn tác cả lần sao chép hoặc sao chép + chèn lên cạnh. Escape/Ctrl+Z trong lúc kéo, pointercancel/blur hoặc thả ngoài canvas hủy preview.
 - Modifier được chốt lúc bắt đầu kéo; thả Ctrl sớm không biến thành kéo bản gốc. Snap, pan và zoom dùng world coordinates; ID ổn định khi Undo/Redo.
+- Đạt 123 unit tests, 112 E2E PASS (+2 skip stress lặp), bản cài Desktop, CI/Pages và 3/3 live tests gồm Ctrl+kéo/Undo. Đã deploy commit `b53d950`; chưa chuyển P4.
 
 ## 0.0.0 — 2026-11-19 — P3 Smart Connector technical PASS
 
