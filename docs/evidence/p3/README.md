@@ -13,5 +13,7 @@ Ngày 2026-11-19. Chi tiết và giới hạn: [`../../p3-status.md`](../../p3-s
 - `ctrl-drag-preview.png`: Ctrl+kéo trước pointer-up; bản gốc/cạnh vẫn ở chỗ cũ, bản sao mờ chưa được tính vào document/history. Ca kiểm thử còn xác nhận Ctrl+click, hủy, nhóm/clipboard, thả lên cạnh và pan/zoom 50/200%.
 - `webview2-ctrl-drag.png`: bản sao sau Ctrl+kéo trong bản cài thật ngày 2026-11-20; test kiểm tra bản gốc không đổi, không copy cạnh ra ngoài và một Undo xóa bản sao. Build log/manifest được cập nhật cho bản bổ sung này.
 - `live-*-pages-ctrl-drag.png`: Ctrl+kéo trên Pages thật sau deploy `b53d950`, cả 3 viewport; test kiểm tra số node/cạnh, vị trí nguồn và một Undo.
+- `ctrl-corner-resize.png`: Ctrl+kéo nút góc giữ tỷ lệ, không nhân đôi, cạnh vẫn bám hình; assertions kiểm tra trước pointer-up, góc đối diện, font, Undo/Redo. Bộ bổ sung chạy cả bốn góc, giới hạn min và zoom 50/200% trên 3 viewport.
+- `webview2-ctrl-corner.png`: resize tỷ lệ thật trong bản cài Windows, không tăng node count và một Undo trả đúng geometry ban đầu. Log/manifest hiện trỏ đến bộ cài có đủ hai cử chỉ Ctrl.
 
 Ảnh chỉ là bằng chứng giao diện; assertions trong `tests/e2e/p3.spec.ts` kiểm tra graph/UUID/endpoints/label/history và cả trước pointer-up. Không có lưu file, sync hoặc AI ở P3.

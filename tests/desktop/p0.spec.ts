@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { captureReferenceView, compareReferenceViews } from '../helpers/visual-reference';
 import { blockSystemClipboard, connectHandles, dragBy, nodeButton, nodeModel, shortcut } from '../helpers/drawing';
 import { insertionFixture, paletteToPoint, pathPoint } from '../helpers/insertion';
+import { cornerDrag, nodeGeometry } from '../helpers/resize';
 
 test('installed Tauri app renders WebView2, resizes, minimizes, restores and navigates', async ({ playwright }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows/WebView2 only');
@@ -150,6 +151,14 @@ test('installed Tauri app renders WebView2, resizes, minimizes, restores and nav
     await expect(page.locator('[data-node]').first()).toHaveAttribute('data-x', originalX!);
     await page.screenshot({ path: testInfo.outputPath('webview2-ctrl-drag.png') });
     await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(3);
+    const resizeSource = page.locator('[data-node]').first(); await resizeSource.click();
+    const beforeRatio = await nodeGeometry(resizeSource);
+    await cornerDrag(page, resizeSource, 'bottom.right', 40, 8);
+    const afterRatio = await nodeGeometry(resizeSource);
+    expect(afterRatio.width).toBeGreaterThan(beforeRatio.width); expect(afterRatio.width / afterRatio.height).toBeCloseTo(beforeRatio.width / beforeRatio.height, 6);
+    await expect(page.locator('[data-node]')).toHaveCount(3); await expect(page.locator('[data-duplicate-preview]')).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath('webview2-ctrl-corner.png') });
+    await shortcut(page, 'Control+z'); expect(await nodeGeometry(resizeSource)).toEqual(beforeRatio);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();

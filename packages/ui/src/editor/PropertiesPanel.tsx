@@ -66,6 +66,6 @@ export function PropertiesPanel(props: PropertiesProps) {
     </>}
     {hasSelection && <div className="property-actions"><button className="btn" onClick={props.duplicate}><Icon name="copy" size="sm"/> Nhân đôi</button><button className="btn" onClick={props.remove}><Icon name="trash" size="sm"/> Xóa</button></div>}
     <label className="snap-setting"><input type="checkbox" checked={props.snap} onChange={(event) => props.setSnap(event.target.checked)}/> Bắt dính lưới 10px</label>
-    <p className="property-note">Thay đổi chỉ trong bộ nhớ; lưu/file ở P4. Thả hình rời lên cạnh sáng tím để chèn. Routing gấp khúc tránh khối ở mức cơ bản; có thể cần tự đổi neo khi không đủ khoảng trống.</p>
+    <p className="property-note">Ctrl+kéo nút góc giữ tỷ lệ; Ctrl+kéo thân hình nhân đôi. Thay đổi chỉ trong bộ nhớ; lưu/file ở P4. Thả hình rời lên cạnh sáng tím để chèn. Routing gấp khúc tránh khối ở mức cơ bản; có thể cần tự đổi neo khi không đủ khoảng trống.</p>
   </div>;
 }

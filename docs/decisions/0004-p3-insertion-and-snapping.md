@@ -17,3 +17,7 @@ Giới hạn: bbox avoidance không phải outline routing hoàn hảo cho mọi
 ## Bổ sung Ctrl+kéo — 2026-11-20
 
 `prepareDuplicateDrag`/`moveDuplicateDrag` tạo kế hoạch UUID ổn định và translate world coordinates, tái sử dụng fragment/remap nhưng không đọc/ghi clipboard. Pointer gesture được adapter bắt trước RF drag; preview không phải domain node, không thay đổi vị trí/cạnh bản gốc hoặc history. Chỉ pointer-up trong canvas mới commit với expectedRevision. Nhóm/đa chọn chỉ copy cạnh nội bộ; một bản sao đơn có thể dùng `insert_node_on_edge` thay cho add để copy + split nguyên tử. Preview dùng RF-only ID riêng để không tái sử dụng cache handle bounds rỗng khi node thật xuất hiện. Ctrl+click không kéo vẫn toggle selection; modifier của copy được chốt ở pointer-down.
+
+## Bổ sung Ctrl+kéo nút góc — 2026-11-20
+
+Ctrl trên thân hình vẫn nhân đôi; Ctrl trên resize handle góc của hình đã chọn khóa tỷ lệ chỉ cho gesture đó. RF/D3 mặc định không khởi động resize với Ctrl-mousedown nên adapter dùng pointer capture, không phát mouse event giả. Domain helper `resizeWithRatio` chiếu delta world-space lên đường chéo góc, dùng một scale cho width/height và clamp min/max cùng scale. Góc đối diện cố định; không sửa style/font/edges. Draft geometry và commit sử dụng interaction/history có sẵn, một Undo. Resize thường vẫn do RF xử lý và tự do như trước; Escape/pointercancel/blur hủy draft, không commit lại khi pointer-up.

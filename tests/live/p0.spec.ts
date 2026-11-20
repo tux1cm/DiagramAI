@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { connectHandles, dragBy, nodeModel, shortcut } from '../helpers/drawing';
 import { insertionFixture, paletteToPoint, pathPoint } from '../helpers/insertion';
+import { cornerDrag, nodeGeometry } from '../helpers/resize';
 
 test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -79,5 +80,13 @@ test('real Pages loads P2 editor and calls Neon PostgreSQL with browser CORS', a
   await expect(page.locator('[data-node]').first()).toHaveAttribute('data-x', x!);
   await page.screenshot({ path: testInfo.outputPath('pages-ctrl-drag.png') });
   await shortcut(page, 'Control+z'); await expect(page.locator('[data-node]')).toHaveCount(2);
+  const ratioSource = page.locator('[data-node]').first(); await ratioSource.click();
+  const beforeRatio = await nodeGeometry(ratioSource);
+  await cornerDrag(page, ratioSource, 'bottom.right', 40, 8);
+  const afterRatio = await nodeGeometry(ratioSource);
+  expect(afterRatio.width).toBeGreaterThan(beforeRatio.width); expect(afterRatio.width / afterRatio.height).toBeCloseTo(beforeRatio.width / beforeRatio.height, 6);
+  await expect(page.locator('[data-node]')).toHaveCount(2); await expect(page.locator('[data-edge]')).toHaveCount(1);
+  await page.screenshot({ path: testInfo.outputPath('pages-ctrl-corner.png') });
+  await shortcut(page, 'Control+z'); expect(await nodeGeometry(ratioSource)).toEqual(beforeRatio);
   expect(errors).toEqual([]);
 });

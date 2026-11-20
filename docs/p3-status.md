@@ -1,5 +1,16 @@
 # P3 — Smart Connector, chèn hình và snap
 
+## Bổ sung cuối: Ctrl+kéo nút góc — 2026-11-20
+
+Đã PASS local Web/Desktop, đang chuẩn bị CI/deploy bổ sung theo yêu cầu cuối của chủ dự án; phần Ctrl+kéo thân để nhân đôi đã có trên site.
+
+- Chọn hình trước, giữ Ctrl rồi kéo một trong bốn nút góc để phóng to/thu nhỏ đúng tỷ lệ, cố định góc đối diện. Modifier được chốt ở pointer-down; nhả Ctrl giữa chừng không đổi loại thao tác.
+- Kéo góc không Ctrl vẫn tự do; Ctrl+kéo thân vẫn nhân đôi, không nhầm với resize. Cỡ chữ/style giữ nguyên; các cạnh vẫn giữ ID/port và bám live geometry.
+- `resizeWithRatio` là geometry pure trong domain; scale/clamp theo min shape và max 4096, không méo ở giới hạn. Một Ctrl+Z hoàn tác; Esc/pointercancel/blur hủy.
+- RF/D3 chặn Ctrl-mousedown: dùng pointer capture riêng cho Ctrl-corner, không sửa thư viện hoặc phát mouse event giả.
+- Lint/typecheck/unit **136/136 PASS**; **24/24 ca Ctrl-corner PASS** trên 3 viewport, gồm bốn góc, shrink/min, không Ctrl, nhả modifier sớm, Escape và zoom 50/200%. Full hồi quy subpath **136 PASS + 2 skip stress lặp có chủ đích**; visual giữ **30/0/22 pixels**, không thêm mask.
+- Full Windows build và bản cài WebView2 **PASS**, gồm Ctrl+kéo nhân đôi, Ctrl-corner resize giữ tỷ lệ và một Undo, không tạo thêm bản sao; native visual vẫn **392/316/378 pixels** trên 3 viewport.
+
 ## Bổ sung Ctrl+kéo — 2026-11-20
 
 Theo yêu cầu chốt P3: giữ Ctrl ở pointer-down rồi kéo để tạo bản sao. Đã PASS Web/Desktop, CI/Pages và live; chưa chuyển P4.
@@ -58,9 +69,9 @@ ADR: [`decisions/0004-p3-insertion-and-snapping.md`](decisions/0004-p3-insertion
 
 ## Artifact local
 
-- Bộ cài mới có Ctrl+kéo `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,062,149 bytes**, SHA-256 `5efe24ae174d6cb8d097cf61d479c71089b3ceea59d0bab3823068668e080462`.
+- Bộ cài mới có Ctrl+kéo thân và Ctrl+kéo góc `File/Desktop_Light/DiagramAI_Setup_x64.exe`: **2,063,010 bytes**, SHA-256 `83e6c8681a701ad8b1bf07da8dd345dcc54dd37f8ad8e97d94a97c3cef776fe4`.
 - Chạy không setup: `apps/desktop/src-tauri/target/release/diagramai.exe`. Static Web: `File/Web/`. Output trước đã archive nguyên vẹn trong `File/Previous/`.
-- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS sau Ctrl+kéo **579.66 kB** (gzip 179.63 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
+- Log/manifest và ảnh: [`evidence/p3/`](evidence/p3/). Main JS sau Ctrl-corner **582.39 kB** (gzip 180.34 kB); warning vẫn giữ, không tăng ngưỡng để che. ESLint 9 deprecated và identifier thử nghiệm `.app` chưa đổi trong phase này.
 
 ## Test nhanh
 

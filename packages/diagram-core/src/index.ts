@@ -9,3 +9,4 @@ export * from './insertion';
 export * from './snapping';
 export * from './routing';
 export * from './duplicate-drag';
+export * from './resize';
