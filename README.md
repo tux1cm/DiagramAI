@@ -25,7 +25,7 @@ Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn �
 
 ```powershell
 npm run prepare:reference
-  npm run check:p5
+npm run check:p5
 npm run build:web
 npm run preview
 ```
@@ -80,7 +80,7 @@ Dependency audit mới nhất ngày 19/11/2026 trả 0 advisories; lịch sử c
 
 Project DiagramAI hiện có tại Singapore; giữ `/v1/health`, thêm API dự án private, CAS/outbox, pairing/revoke/recovery. Migration dev được kiểm thử trước production, production có snapshot backup. Xem [`docs/p5-usage.md`](docs/p5-usage.md) và ADR 0006. API mặc định tắt sync nếu thiếu cấu hình; không gửi secrets vào chat hoặc commit `.env`.
 
-`npm run test:live` kiểm tra Pages + Neon thật trên 3 viewport bằng Edge Windows (Chromium trên Linux), có browser preflight, chỉ query health. Không tự deploy hoặc thay dữ liệu. Ảnh trong `test-results/live/`.
+Test live tập trung P5: `npx playwright test --config playwright.live-p5.config.ts` kiểm tra hai browser trên Pages ↔ Neon production, chỉ tạo fixture riêng và xóa sau test. `npm run test:live` là bộ live cũ P0–P4 (3 viewport), không chạy mặc định trong P5.
 
 ## GitHub Pages
 

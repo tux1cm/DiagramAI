@@ -1,9 +1,9 @@
 ﻿{
-    "builtAt":  "2026-11-23T05:16:49.5859466Z",
+    "builtAt":  "2026-11-23T05:21:47.0076842Z",
     "version":  "0.0.0",
-    "bytes":  3878286,
+    "bytes":  3877408,
     "testBuild":  false,
     "installer":  "DiagramAI_Setup_x64.exe",
-    "sha256":  "84850149cbbc6c20dbd1a7748119b4a3974f584445d2f569874a02f6bc258aa7",
+    "sha256":  "688a20ab15450190b061e5b5868ee789df56b83010ba847c3e93a580cd809b42",
     "phase":  "P5 local and cloud sync - not v1.0"
 }
