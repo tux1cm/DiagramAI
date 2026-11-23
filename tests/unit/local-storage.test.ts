@@ -46,7 +46,7 @@ describe('local project session', () => {
     const saved = await repo.save({ document, expectedVersion: null, operationId: newId() });
     const damaged = { ...saved, payload: 'corrupt bytes' };
     await new Promise<void>((resolve, reject) => {
-      const request = factory.open('test', 1);
+      const request = factory.open('test');
       request.onsuccess = () => {
         const db = request.result, tx = db.transaction('documents', 'readwrite');
         tx.objectStore('documents').put(damaged);

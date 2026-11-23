@@ -7,7 +7,7 @@ call :build > logs\build.log 2>&1
 set "RESULT=%ERRORLEVEL%"
 type logs\build.log
 echo Log: %CD%\logs\build.log
-if not "%RESULT%"=="0" echo BUILD BLOCKED/FAIL. See log above. P0 is not complete.
+if not "%RESULT%"=="0" echo BUILD BLOCKED/FAIL. See log above.
 if "%RESULT%"=="0" echo BUILD OK. Runtime/UAT still required.
 if /i not "%~1"=="--no-pause" pause
 exit /b %RESULT%
@@ -23,8 +23,8 @@ call npm ci
 if not "%ERRORLEVEL%"=="0" exit /b 1
 call npm run prepare:reference
 if not "%ERRORLEVEL%"=="0" exit /b 1
-echo [3/6] Lint, types, unit tests
-call npm run check
+echo [3/6] Lint, types, current phase tests only (full regression is deferred to P7)
+call npm run check:p5
 if not "%ERRORLEVEL%"=="0" exit /b 1
 echo [4/6] Build shared Web + Tauri NSIS
 call npm run desktop:build

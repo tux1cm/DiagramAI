@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@diagramai/diagram-core": "*", "@tauri-apps/api": "2.12.5" }
+  "dependencies": { "@diagramai/diagram-core": "*", "@diagramai/sync-core": "*", "@tauri-apps/api": "2.12.5" }
 }

@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{path::Path, time::{Duration, SystemTime, UNIX_EPOCH}};
+use std::{collections::HashSet, path::{Path,PathBuf}, sync::{Mutex,OnceLock}, time::{Duration, SystemTime, UNIX_EPOCH}};
 
 pub type Result<T> = std::result::Result<T, String>;
 const LIMIT: usize = 2 * 1024 * 1024;
@@ -21,11 +21,18 @@ pub struct Record {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Summary { document_id: String, title: String, version: i64, saved_at: i64, node_count: i64, edge_count: i64 }
-fn open(path: &Path) -> Result<Connection> {
+pub(crate) fn open(path: &Path) -> Result<Connection> {
+    // Local initialization and the cloud-link reader can start at the same time.
+    // Serialize the initial WAL/schema setup instead of racing DDL on every IPC.
+    static INITIALIZED:OnceLock<Mutex<HashSet<PathBuf>>>=OnceLock::new();
+    let mut initialized=INITIALIZED.get_or_init(||Mutex::new(HashSet::new())).lock().map_err(error)?;
+    let exists=path.exists();
     if let Some(parent) = path.parent() { std::fs::create_dir_all(parent).map_err(error)?; }
     let db = Connection::open(path).map_err(error)?;
     db.busy_timeout(Duration::from_secs(5)).map_err(error)?;
-    db.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
+    db.execute_batch("PRAGMA synchronous=FULL;").map_err(error)?;
+    if !exists||!initialized.contains(path) {
+    db.execute_batch("PRAGMA journal_mode=WAL;
       CREATE TABLE IF NOT EXISTS local_documents (
         document_id TEXT PRIMARY KEY, title TEXT NOT NULL, payload TEXT NOT NULL, hash TEXT NOT NULL,
         operation_id TEXT NOT NULL, node_count INTEGER NOT NULL, edge_count INTEGER NOT NULL,
@@ -35,13 +42,16 @@ fn open(path: &Path) -> Result<Connection> {
         PRIMARY KEY(document_id, version));
       CREATE TABLE IF NOT EXISTS local_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS sync_outbox (operation_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS sync_links (document_id TEXT PRIMARY KEY, generation INTEGER NOT NULL, state_json TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS device_credentials (device_id TEXT PRIMARY KEY, reference TEXT NOT NULL);").map_err(error)?;
+    initialized.insert(path.to_path_buf());
+    }
     Ok(db)
 }
-fn row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Record> {
+pub(crate) fn row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Record> {
     Ok(Record { document_id: row.get(0)?, title: row.get(1)?, payload: row.get(2)?, hash: row.get(3)?, operation_id: row.get(4)?, node_count: row.get(5)?, edge_count: row.get(6)?, version: row.get(7)?, saved_at: row.get(8)? })
 }
-const COLUMNS: &str = "document_id,title,payload,hash,operation_id,node_count,edge_count,version,saved_at";
+pub(crate) const COLUMNS: &str = "document_id,title,payload,hash,operation_id,node_count,edge_count,version,saved_at";
 pub fn load(path: &Path, id: &str) -> Result<Option<Record>> {
     open(path)?.query_row(&format!("SELECT {COLUMNS} FROM local_documents WHERE document_id=?1"), [id], row).optional().map_err(error)
 }
@@ -51,7 +61,7 @@ pub fn list(path: &Path) -> Result<Vec<Summary>> {
     let rows = query.query_map([], |row| Ok(Summary { document_id: row.get(0)?, title: row.get(1)?, version: row.get(2)?, saved_at: row.get(3)?, node_count: row.get(4)?, edge_count: row.get(5)? })).map_err(error)?;
     rows.collect::<std::result::Result<Vec<_>, _>>().map_err(error)
 }
-fn validate(record: &Prepared) -> Result<()> {
+pub(crate) fn validate(record: &Prepared) -> Result<()> {
     if record.payload.len() > LIMIT || uuid::Uuid::parse_str(&record.document_id).is_err() || uuid::Uuid::parse_str(&record.operation_id).is_err() { return Err("Dữ liệu local không hợp lệ hoặc vượt 2 MB.".into()); }
     let json: serde_json::Value = serde_json::from_str(&record.payload).map_err(error)?;
     if json["format"] != "diagramai" || json["formatVersion"] != 1 || json["documentId"] != record.document_id || json["title"] != record.title
@@ -79,7 +89,9 @@ pub fn save(path: &Path, input: Prepared, expected: Option<i64>) -> Result<Recor
 pub fn remove(path: &Path, id: &str, expected: i64) -> Result<()> {
     let mut db = open(path)?; let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate).map_err(error)?;
     if tx.execute("DELETE FROM local_documents WHERE document_id=?1 AND version=?2", params![id,expected]).map_err(error)? != 1 { return Err("LOCAL_CONFLICT".into()); }
-    tx.execute("DELETE FROM local_revisions WHERE document_id=?1", [id]).map_err(error)?; tx.commit().map_err(error)
+    tx.execute("DELETE FROM local_revisions WHERE document_id=?1", [id]).map_err(error)?;
+    crate::sync::clear_link(&tx,id)?;
+    tx.commit().map_err(error)
 }
 pub fn revisions(path: &Path, id: &str) -> Result<Vec<Record>> {
     let db = open(path)?; let mut query = db.prepare("SELECT record FROM local_revisions WHERE document_id=?1 ORDER BY version DESC").map_err(error)?;

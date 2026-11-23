@@ -1,6 +1,6 @@
 # DiagramAI
 
-P3 đã được chủ dự án chốt. P4 local/file/offline đạt kiểm thử Web/Desktop, CI/Pages và live, chờ nghiệm thu — **chưa phải editor sản phẩm v1.0**. Yêu cầu gốc: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p4-status.md`](docs/p4-status.md); lịch sử: [`docs/p3-status.md`](docs/p3-status.md), [`docs/p2-status.md`](docs/p2-status.md), [`docs/p1-status.md`](docs/p1-status.md), [`docs/p0-status.md`](docs/p0-status.md).
+P4 đã được chủ dự án chốt. P5 thêm đồng bộ riêng tư Web ↔ Desktop không đăng nhập, đang xác minh bản phát hành — **chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p5-status.md`](docs/p5-status.md); hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md). Lịch sử P4: [`docs/p4-status.md`](docs/p4-status.md).
 
 ## Chạy Web trên Windows
 
@@ -13,7 +13,7 @@ npm run dev
 
 Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Kéo hình rời lên cạnh sáng tím để chèn A→C→B, một Ctrl+Z hoàn tác cả lần chèn. Ctrl+kéo thân nhân đôi; Ctrl+kéo góc giữ tỷ lệ quanh tâm. Có snap/guideline, nhóm/căn chỉnh, clipboard và Undo/Redo.
 
-P4 tự lưu thay đổi đã commit vào IndexedDB (Web) / SQLite (Desktop); chỉ **Đã lưu trên máy** sau ghi thành công. Nút **Sơ đồ** quản lý nhiều bản vẽ và 20 checkpoint; **Ctrl+S** lưu `.diagramai`, **Ctrl+Shift+S** lưu thành file mới. Hỗ trợ SVG/PNG/PDF tiếng Việt. File ngoài ổ đĩa không bị autosave ghi đè. Web production có PWA offline sau khi cache hoàn tất; dev server không cài service worker. Xóa site/app data hoặc private session có thể mất kho local: **hãy xuất `.diagramai` dự phòng**. Web/Desktop là hai kho riêng, cloud/AI vẫn P5/P6.
+Tự lưu thay đổi đã commit vào IndexedDB (Web) / SQLite (Desktop); chỉ **Đã lưu trên máy** sau ghi thành công. Nút **Sơ đồ** quản lý nhiều bản vẽ và 20 checkpoint; **Ctrl+S** lưu `.diagramai`, **Ctrl+Shift+S** lưu thành file mới. Hỗ trợ SVG/PNG/PDF tiếng Việt. File ngoài ổ đĩa không bị autosave ghi đè. Web production có PWA offline sau khi cache hoàn tất; dev server không cài service worker. Xóa site/app data hoặc private session có thể mất kho local: **hãy xuất `.diagramai` dự phòng**. Cloud là tùy chọn từng dự án: bật trên máy nguồn, sao lưu mã khôi phục riêng tư rồi ghép máy đích bằng mã một lần. Hai kho local vẫn độc lập; chỉ báo **Đã đồng bộ** sau server ACK và ghi local thành công.
 
 Hướng dẫn lưu, dự phòng, xử lý lỗi/xung đột: [`docs/p4-usage.md`](docs/p4-usage.md).
 
@@ -25,12 +25,14 @@ Link **Kiểm tra nền tảng** trong footer (hoặc `/#/spike`) giữ chẩn �
 
 ```powershell
 npm run prepare:reference
-npm run check
+  npm run check:p5
 npm run build:web
 npm run preview
 ```
 
 ## Kiểm thử trình duyệt
+
+Theo yêu cầu chủ dự án, mặc định giai đoạn này chỉ chạy **P5 + điểm nối P4→P5** (`npm run check:p5`, `npm run test:p5:web`). Web suite cần `DIAGRAMAI_P5_TEST_PROJECT` và `DIAGRAMAI_P5_TEST_BRANCH` trỏ nhánh dev hiện có, không production; CI dùng Postgres localhost ephemeral. Các lệnh `test:e2e` bên dưới là bộ tổng thể cũ, dành cuối P7 hoặc khi được yêu cầu.
 
 ```powershell
 npx playwright install chromium
@@ -66,7 +68,7 @@ npm run desktop:build
 
 `build.bat` kiểm tra môi trường và Vite server đang giữ dependency, dùng `npm ci`, kiểm tra mã, build NSIS/Web, copy vào `File/Desktop_Light` và `File/Web`, ghi `logs/build.log`. Không deploy, không migration, không ZIP. Output cũ được chuyển nguyên vẹn vào `File/Previous/<timestamp>/`, không xóa hay trộn file. Desktop dùng cùng build Web nhưng ép base `/`; bản Web dùng base đã cấu hình. Dùng `build.bat --no-pause` cho kiểm thử tự động.
 
-**Đã build và kiểm thử NSIS cài/gỡ, WebView2 render, resize/minimize/restore và hash route/reload**. P2 kiểm tra thêm sửa chữ/nhãn cạnh, kéo/resize, nối, clipboard và Undo; chưa nghiệm thu editor sản phẩm hoàn chỉnh. Chạy lại bằng `npm run test:desktop`: dùng thư mục cài riêng, không tạo shortcut, từ chối ghi đè app người dùng đã cài, profile WebView2 riêng và debug loopback chỉ trong test; so pixel với reference ở 3 viewport sau khi fit cùng camera.
+`npm run test:desktop` hiện chỉ chạy P5 trên **test build** (`DIAGRAMAI_TEST_BUILD=1`, API loopback): SQLite/DPAPI ↔ Web, offline/restart/outbox và conflict. Harness cài/gỡ riêng, không shortcut, không thay app người dùng đã cài; dùng profile riêng. Bộ Desktop tổng thể cũ là `npm run test:desktop:full`, dành cuối P7. Kiểm tra bản production qua managed API bằng `scripts/test-desktop.ps1 -Scope managed` và `DIAGRAMAI_NATIVE_MANAGED_API` trỏ đúng production origin.
 
 - Bộ cài: `File/Desktop_Light/DiagramAI_Setup_x64.exe`.
 - Chạy thử **không cần setup**: `apps/desktop/src-tauri/target/release/diagramai.exe`.
@@ -74,9 +76,9 @@ npm run desktop:build
 
 Dependency audit mới nhất ngày 19/11/2026 trả 0 advisories; lịch sử cảnh báo và giới hạn tại `docs/p0-dependency-audit.md`. Build/audit đạt không đồng nghĩa toàn bộ sản phẩm đã qua security review.
 
-## Neon P0
+## Neon P5 (giữ health P0)
 
-Xem [`docs/p0-neon-spike.md`](docs/p0-neon-spike.md) và bằng chứng deploy [`docs/p0-status.md`](docs/p0-status.md). Health đã deploy vào project DiagramAI hiện có tại Singapore; Pages gọi DB thật thành công. Chỉ có `/v1/health`; chưa có API dự án, đồng bộ hay AI. Không cần Gemini key cho P0. Không gửi credentials vào chat hoặc commit `.env`.
+Project DiagramAI hiện có tại Singapore; giữ `/v1/health`, thêm API dự án private, CAS/outbox, pairing/revoke/recovery. Migration dev được kiểm thử trước production, production có snapshot backup. Xem [`docs/p5-usage.md`](docs/p5-usage.md) và ADR 0006. API mặc định tắt sync nếu thiếu cấu hình; không gửi secrets vào chat hoặc commit `.env`.
 
 `npm run test:live` kiểm tra Pages + Neon thật trên 3 viewport bằng Edge Windows (Chromium trên Linux), có browser preflight, chỉ query health. Không tự deploy hoặc thay dữ liệu. Ảnh trong `test-results/live/`.
 
@@ -86,7 +88,7 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 
 1. Đặt repository variable `VITE_BASE_PATH`: `/<tên-repo-đã-chốt>/` cho project site, `/` cho user site/custom domain.
 2. `VITE_API_BASE_URL`: URL HTTPS công khai của Neon Function, không chứa token; có thể để trống khi chưa liên kết Neon.
-3. Chạy workflow **Deploy Pages (manual P0 spike)**. Không tự publish từ build local.
+3. Chạy workflow **Deploy Pages (manual P5 preview)**. Không tự publish từ build local.
 4. Kiểm tra URL thật, refresh `/#/spike`, CORS trong trình duyệt. Tôn trọng lựa chọn Cốc Cốc của chủ dự án; không tự mở Chrome.
 
 `node scripts/p0-github-pages.mjs status` đọc trạng thái qua Git Credential Manager mà không in/lưu token. Mode `setup`/`dispatch` sửa config hoặc deploy repo đã chốt, chỉ chạy khi có ý định publish; không được gọi tự động từ build local. Không mặc định workflow file hoặc dispatch đồng nghĩa deploy thành công.
@@ -95,7 +97,7 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 
 - `apps/web`: React/Vite entry.
 - `apps/desktop`: Tauri 2, dùng cùng frontend.
-- `apps/api`: Neon health handler và cấu hình deploy spike.
+- `apps/api`: Neon health/private sync API, migrations và cấu hình deploy.
 - `packages/ui`: AppShell, components React và properties/shortcuts; diagnostics P0 vẫn giữ riêng.
 - `packages/diagram-core`: schema/registry, commands atomic, clipboard, nhóm/căn chỉnh và history độc lập React Flow.
 - `packages/editor`: adapter React Flow, SVG nodes/edges, inline labels, kéo/resize/connect và viewport.
@@ -103,4 +105,4 @@ Repo đã được chủ dự án xác nhận: https://github.com/tux1cm/Diagram
 - `design/reference`: bản HTML nguyên vẹn và ảnh baseline.
 - `docs`: kiến trúc, quyết định và báo cáo P0/P1/P2.
 
-SQLite/IndexedDB, file import/export, sync và AI thuộc các phase sau, **chưa triển khai**.
+`packages/local-storage` chứa SQLite/IndexedDB và durable sync journal; `packages/sync-core` chứa protocol/client/coordinator. AI thuộc P6, **chưa triển khai**.

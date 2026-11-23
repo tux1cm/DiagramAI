@@ -16,7 +16,7 @@ test('opens the P2 editor without an iframe or login', async ({ page }, testInfo
   await expect(page.locator('[data-node]')).toHaveCount(6);
   await expect(page.locator('[data-edge]')).toHaveCount(5);
   await expect(page.locator('#canvasHost')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('.editor-app')).toHaveAttribute('data-phase', 'p4');
+  await expect(page.locator('.editor-app')).toHaveAttribute('data-phase', 'p5');
   await expect(page.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('p2-shell.png') });
   expect(errors).toEqual([]);

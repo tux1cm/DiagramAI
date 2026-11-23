@@ -42,7 +42,7 @@ export function PropertiesPanel(props: PropertiesProps) {
   const hasGroup = props.document.groups.some((group) => group.nodeIds.some((id) => props.selection.nodeIds.includes(id)));
   return <div className="prop-content">
     <h3>{nodes.length === 1 && !edges.length ? 'Chỉnh sửa hình khối' : edges.length === 1 && !nodes.length ? 'Thuộc tính đường nối' : 'Thuộc tính'}</h3>
-    <p>{hasSelection ? `${nodes.length} hình · ${edges.length} đường nối đang chọn` : 'Chọn hình hoặc đường nối để chỉnh sửa. Thay đổi hiện chỉ nằm trong bộ nhớ.'}</p>
+    <p>{hasSelection ? `${nodes.length} hình · ${edges.length} đường nối đang chọn` : 'Chọn hình hoặc đường nối để chỉnh sửa. Thay đổi đã xác nhận được tự lưu trên máy; trạng thái cloud hiển thị riêng.'}</p>
     {!hasSelection && <><div className="feature-card"><span>Hình khối</span><strong>{props.document.nodes.length}</strong></div><div className="feature-card"><span>Đường nối</span><strong>{props.document.edges.length}</strong></div></>}
     {node && <>
       {nodes.length === 1 && <><p>{SHAPE_DEFINITIONS[node.type].name}</p><CommitField label="Nội dung" value={node.text} multiline maxLength={4000} commit={(text) => props.nodePatch({ text })}/></>}
@@ -66,6 +66,6 @@ export function PropertiesPanel(props: PropertiesProps) {
     </>}
     {hasSelection && <div className="property-actions"><button className="btn" onClick={props.duplicate}><Icon name="copy" size="sm"/> Nhân đôi</button><button className="btn" onClick={props.remove}><Icon name="trash" size="sm"/> Xóa</button></div>}
     <label className="snap-setting"><input type="checkbox" checked={props.snap} onChange={(event) => props.setSnap(event.target.checked)}/> Bắt dính lưới 10px</label>
-    <p className="property-note">Ctrl+kéo nút góc: thu/phóng từ tâm, giữ tỷ lệ; Ctrl+kéo thân hình: nhân đôi. Thay đổi chỉ trong bộ nhớ; lưu/file ở P4. Thả hình rời lên cạnh sáng tím để chèn. Routing gấp khúc tránh khối ở mức cơ bản; có thể cần tự đổi neo khi không đủ khoảng trống.</p>
+    <p className="property-note">Ctrl+kéo nút góc: thu/phóng từ tâm, giữ tỷ lệ; Ctrl+kéo thân hình: nhân đôi. Theo dõi trạng thái lưu local và Cloud ở thanh trên. Thả hình rời lên cạnh sáng tím để chèn. Routing gấp khúc tránh khối ở mức cơ bản; có thể cần tự đổi neo khi không đủ khoảng trống.</p>
   </div>;
 }

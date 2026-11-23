@@ -1,6 +1,15 @@
 @import './reference.css';
 @import '@diagramai/editor/styles.css';
 #root { height: 100%; }
+.editor-root { height: 100%; }
+.cloud-panel textarea { display: block; width: 100%; padding: 8px; border: 1px solid #dce3ef; border-radius: 7px; resize: vertical; }
+.cloud-panel section { margin: 16px 0; }
+.cloud-panel code { overflow-wrap: anywhere; }
+.cloud-join form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.cloud-join label { flex: 1; min-width: 200px; }
+.pairing-code { display: block; font-size: 26px; font-weight: 700; letter-spacing: 3px; color: #596bf1; }
+.cloud-chip { max-width: 210px; }
+.cloud-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-app .status-dot.unsaved { background: #9ca7b8; }
 .editor-app .logo .ico { stroke-width: 2.2; }
 .editor-app .project-name .ico { color: #95a0b2; }

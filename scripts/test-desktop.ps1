@@ -1,8 +1,17 @@
+param([ValidateSet('p5', 'managed', 'full')][string]$Scope = 'p5')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 $setup = Join-Path $root 'File/Desktop_Light/DiagramAI_Setup_x64.exe'
 if (!(Test-Path $setup)) { throw 'Build and collect the Windows UI installer first.' }
+if ($Scope -eq 'p5') {
+    $manifest = Get-Content 'File/Desktop_Light/release-manifest.json' -Raw | ConvertFrom-Json
+    if ($manifest.phase -notlike 'P5*' -or !$manifest.testBuild) { throw 'P5 focused native suite needs a P5 test build (DIAGRAMAI_TEST_BUILD=1, VITE_API_BASE_URL=http://127.0.0.1:8787).' }
+}
+if ($Scope -eq 'managed') {
+    $manifest = Get-Content 'File/Desktop_Light/release-manifest.json' -Raw | ConvertFrom-Json
+    if ($manifest.phase -notlike 'P5*' -or $manifest.testBuild) { throw 'Managed verification requires the final P5 production build, not a fixture build.' }
+}
 # Never replace an existing user installation, even if it has the same version.
 foreach ($hive in @('HKCU:', 'HKLM:')) {
     if (Test-Path "$hive\Software\Microsoft\Windows\CurrentVersion\Uninstall\DiagramAI") {
@@ -21,7 +30,8 @@ try {
     $exe = Join-Path $install 'diagramai.exe'
     if (!(Test-Path $exe)) { throw 'Installed executable not found' }
     $env:DIAGRAMAI_TEST_EXE = $exe
-    & npx.cmd playwright test --config playwright.desktop.config.ts
+    $config = if ($Scope -eq 'full') { 'playwright.desktop.config.ts' } elseif ($Scope -eq 'managed') { 'playwright.desktop-managed-p5.config.ts' } else { 'playwright.desktop-p5.config.ts' }
+    & npx.cmd playwright test --config $config
     $result = $LASTEXITCODE
 } finally {
     if ($created -and (Test-Path (Join-Path $install 'uninstall.exe'))) {

@@ -11,9 +11,11 @@ import type { ProjectSession, ProjectSessionSnapshot } from '@diagramai/local-st
 import { useFileActions } from '../files/useFileActions';
 import { ProjectsPanel } from '../files/ProjectsPanel';
 import { ExportPanel } from '../files/ExportPanel';
+import { CloudPanel, CLOUD_LABELS } from '../cloud/CloudPanel';
+import type { CloudController } from '../cloud/useCloud';
 
 type Dialog = 'help' | 'cloud' | 'files' | 'export' | null;
-export function EditorShell({ store, session, local, basePath }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string }) {
+export function EditorShell({ store, session, local, basePath, cloud }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string; cloud: CloudController }) {
   const state = useDiagram(store), document = state.document;
   const [tab, setTab] = useState<InspectorTab>('ai');
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -61,6 +63,7 @@ export function EditorShell({ store, session, local, basePath }: { store: Diagra
       } catch { onError('Clipboard không có dữ liệu DiagramAI hợp lệ hoặc quyền clipboard bị chặn.'); }
     };
     const keydown = (event: KeyboardEvent) => {
+      if (session.isExternalUpdating()) return;
       if (event.defaultPrevented || event.isComposing || typing(event.target) || globalThis.document.querySelector('[aria-modal=true]')) return;
       const key = event.key.toLowerCase(), ctrl = event.ctrlKey || event.metaKey;
       if (ctrl && ['z', 'y', 'a', 'c', 'v', 'x', 'd', 's', 'g'].includes(key)) {
@@ -90,10 +93,10 @@ export function EditorShell({ store, session, local, basePath }: { store: Diagra
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [store, execute, duplicate, remove, group, ungroup, onError, saveFile]);
+  }, [store, execute, duplicate, remove, group, ungroup, onError, saveFile, session]);
   const hasSelection = Boolean(state.selection.nodeIds.length || state.selection.edgeIds.length);
-  return <div id="app" className="editor-app" data-phase="p4">
-    <Topbar title={document.title} status={saveStatus} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={setDialog}/>
+  return <div id="app" className="editor-app" data-phase="p5">
+    <Topbar title={document.title} status={saveStatus} cloudStatus={!cloud.link ? 'Chưa bật' : cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]} cloudBusy={cloud.busy || cloud.state.status === 'syncing'} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={setDialog}/>
     {(local.status === 'error' || local.status === 'conflict' || local.message) && <div className="storage-banner" role="alert">{local.message} <button onClick={() => setDialog('files')}>Dự phòng / Khôi phục</button></div>}
     <section className="workarea">
       <aside className="rail" aria-label="Công cụ">
@@ -102,7 +105,7 @@ export function EditorShell({ store, session, local, basePath }: { store: Diagra
         <button className={`railbtn ${tool === 'pan' ? 'active' : ''}`} title="Di chuyển canvas" onClick={() => setTool('pan')}><Icon name="hand" size="lg"/></button>
         <button className={`railbtn ${tool === 'link' ? 'active' : ''}`} title="Tạo đường nối" onClick={() => setTool('link')}><Icon name="link" size="lg"/></button>
         <button className="railbtn" title="Trợ lý AI" aria-expanded={!inspectorCollapsed} onClick={() => { setInspectorCollapsed(!inspectorCollapsed); setTab('ai'); }}><Icon name="sparkle" size="lg"/></button>
-        <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P3" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
+        <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P5" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
       </aside>
       <Palette collapsed={paletteCollapsed} addShape={addShape}/>
       <main className="canvas-column"><Toolbar zoom={zoom} tool={tool} setTool={setTool} changeZoom={(value) => canvas.current?.zoomTo(value)} fit={() => canvas.current?.fit()} undo={() => store.undo()} redo={() => store.redo()} canUndo={Boolean(state.past.length || state.interaction)} canRedo={Boolean(state.future.length)} duplicate={duplicate} remove={remove} hasSelection={hasSelection}/>
@@ -110,13 +113,13 @@ export function EditorShell({ store, session, local, basePath }: { store: Diagra
       </main>
       <Inspector document={document} selection={state.selection} activeTab={tab} setTab={setTab} collapsed={inspectorCollapsed} nodePatch={nodePatch} edgePatch={edgePatch} geometry={geometry} arrange={arrange} group={group} ungroup={ungroup} duplicate={duplicate} remove={remove} snap={snap} setSnap={setSnap}/>
       {notice && <div className="toast-stack" role="status"><div className="toast">{notice}</div></div>}
-       {dialog && <Modal title={{ help: 'DiagramAI · Local-first P4', cloud: 'Đồng bộ chưa được bật', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF' }[dialog]} close={close}>
-        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Ctrl+kéo thân hình để nhân đôi; Ctrl+kéo góc để resize giữ tỷ lệ quanh tâm. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan.</p><p>Tự lưu local sau khi kết thúc chỉnh sửa. Ctrl+S lưu file, Ctrl+Shift+S lưu thành file mới. Nút Sơ đồ quản lý nhiều bản vẽ/checkpoint. File ngoài ổ đĩa chỉ được ghi khi bạn yêu cầu; nên xuất .diagramai dự phòng. Chưa sync/AI (P5/P6).</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
-         {dialog === 'cloud' && <><p>Sơ đồ được lưu local trên máy, chưa đồng bộ cloud. Đồng bộ Desktop ↔ Web thuộc P5; không có tài khoản hay token dự án được tạo.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
+       {dialog && <Modal title={{ help: 'DiagramAI · Đồng bộ P5', cloud: 'Đồng bộ Web ↔ Desktop', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF' }[dialog]} close={close}>
+        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Ctrl+kéo thân hình để nhân đôi; Ctrl+kéo góc để resize giữ tỷ lệ quanh tâm. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan.</p><p>Tự lưu local sau khi kết thúc chỉnh sửa. Ctrl+S lưu file, Ctrl+Shift+S lưu thành file mới. Nút Sơ đồ quản lý nhiều bản vẽ/checkpoint; file ngoài ổ đĩa chỉ ghi khi bạn yêu cầu. Cloud cho phép bật đồng bộ từng dự án, ghép thiết bị bằng mã một lần và giữ cả hai nhánh khi xung đột. Nên xuất .diagramai và giữ mã khôi phục riêng tư. AI vẫn thuộc P6.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
+         {dialog === 'cloud' && <CloudPanel cloud={cloud} document={document} notice={onError} saveLocal={() => void files.save(true, true)}/>}
          {dialog === 'files' && <ProjectsPanel session={session} state={local} close={close} notice={onError} saveFile={files.save} openFile={files.open}/>}
          {dialog === 'export' && <ExportPanel session={session} basePath={basePath} notice={onError}/>}
       </Modal>}
     </section>
-    <footer className="footer"><span>DiagramAI · <b>P4 local-first</b> · {saveStatus} · <a href="#/spike">Kiểm tra nền tảng</a></span><span><span className="hide-small">{state.selection.nodeIds.length + state.selection.edgeIds.length} đang chọn &nbsp;·&nbsp; </span><b>{document.nodes.length} hình · {document.edges.length} đường nối</b> &nbsp;·&nbsp; <span>{Math.round(zoom * 100)}%</span></span></footer>
+    <footer className="footer"><span>DiagramAI · <b>P5 local + cloud</b> · {saveStatus} · <a href="#/spike">Kiểm tra nền tảng</a></span><span><span className="hide-small">{state.selection.nodeIds.length + state.selection.edgeIds.length} đang chọn &nbsp;·&nbsp; </span><b>{document.nodes.length} hình · {document.edges.length} đường nối</b> &nbsp;·&nbsp; <span>{Math.round(zoom * 100)}%</span></span></footer>
   </div>;
 }

@@ -6,6 +6,8 @@ import { EditorShell } from './editor/EditorShell';
 import { IndexedDbRepository, ProjectSession, SqliteRepository } from '@diagramai/local-storage';
 import { isTauri } from '@tauri-apps/api/core';
 import { createInitialDocument } from './editor/initial-document';
+import { useCloud } from './cloud/useCloud';
+import { hasEditorDraft } from './editor/drafts';
 
 const nodes = [
   { id: 'p0-a', position: { x: 0, y: 0 }, data: { label: 'React Flow v12' } },
@@ -16,6 +18,7 @@ const edges = [{ id: 'p0-ab', source: 'p0-a', target: 'p0-b' }];
 export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUrl: string }) {
   const [session] = useState(() => new ProjectSession(isTauri() ? new SqliteRepository() : new IndexedDbRepository(), createInitialDocument));
   const local = useSyncExternalStore(session.subscribe, session.getSnapshot);
+  const cloud = useCloud(session, local, apiBaseUrl);
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -26,7 +29,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
   }, []);
   useEffect(() => {
     void session.initialize();
-    const hasDraft = () => Boolean(document.querySelector('.inline-node-editor,.inline-edge-editor,.project-name input'));
+    const hasDraft = hasEditorDraft;
     const warn = (event: BeforeUnloadEvent) => { if (session.hasUnsaved() || session.getSnapshot().status === 'saving' || hasDraft()) { event.preventDefault(); event.returnValue = ''; } };
     const flush = () => { if (!hasDraft()) void session.flush().catch(() => {}); };
     window.addEventListener('beforeunload', warn);
@@ -59,7 +62,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath}/>;
+  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <div className="editor-root" inert={session.isExternalUpdating()}><EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath} cloud={cloud}/></div>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>

@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 test('Pages P4 persists Vietnamese edits, exports embedded-font PDF and reopens offline', async ({ page, context }, testInfo) => {
   await page.addInitScript(() => { Object.defineProperty(window, 'showSaveFilePicker', { value: undefined }); });
   await page.goto('./'); await ready(page);
-  await expect(page.locator('.editor-app')).toHaveAttribute('data-phase', 'p4');
+  await expect(page.locator('.editor-app')).toHaveAttribute('data-phase', 'p5');
   await nodeModel(page, 'Tiếp nhận vật tư').dblclick();
   const input = page.getByRole('textbox', { name: 'Sửa chữ trong hình', exact: true });
   await input.fill('Tiếng Việt đã lưu offline'); await input.press('Enter');

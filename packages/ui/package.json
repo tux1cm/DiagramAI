@@ -11,6 +11,7 @@
     "@diagramai/diagram-core": "*",
     "@diagramai/editor": "*",
     "@diagramai/local-storage": "*",
+    "@diagramai/sync-core": "*",
     "@diagramai/shared": "*",
     "@tauri-apps/api": "2.12.5",
     "@tauri-apps/plugin-dialog": "2.8.4",

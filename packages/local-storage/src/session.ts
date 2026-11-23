@@ -4,6 +4,8 @@ import { decodeRecord, LocalConflict, type LocalRepository, type ProjectSummary,
 export type SaveStatus = 'loading' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 export interface ProjectSessionSnapshot { store: DiagramStore; projects: ProjectSummary[]; status: SaveStatus; message: string; busy: boolean; version: number | null; savedAt: number | null; epoch: number }
 export class ProjectSession {
+  private externalUpdating = false;
+  isExternalUpdating = () => this.externalUpdating;
   private state: ProjectSessionSnapshot;
   private listeners = new Set<() => void>();
   private savedPayload: string | null = null;
@@ -69,6 +71,7 @@ export class ProjectSession {
     }
   }
   private changed() {
+    if (this.externalUpdating) { if (this.hasUnsaved()) this.publish({ status: 'dirty' }); return; }
     if (this.paused) return;
     if (this.write) { this.publish({ status: 'saving' }); return; }
     if (!this.hasUnsaved()) { this.publish({ status: 'saved' }); return; }
@@ -102,6 +105,21 @@ export class ProjectSession {
   }
   async retry() { this.paused = false; await this.flush(); }
   async refreshProjects() { this.publish({ projects: await this.repository.list() }); }
+  async receiveExternal<T>(documentId: string, work: () => Promise<T>): Promise<T> {
+    if (documentId !== this.state.store.getSnapshot().document.documentId) return work();
+    if (this.externalUpdating || this.state.busy || this.write || this.hasUnsaved()) throw new Error('Hãy kết thúc lưu/chỉnh sửa local trước khi nhận cloud.');
+    const store = this.state.store, payload = this.payload();
+    this.externalUpdating = true; this.publish({ busy: true });
+    try {
+      const result = await work(), record = await this.repository.load(documentId);
+      if (store !== this.state.store || this.payload() !== payload) throw new Error('Có chỉnh sửa mới trong bộ nhớ; chưa thay editor bằng bản cloud.');
+      if (record && record.version !== this.state.version) this.attach(await decodeRecord(record), record);
+      await this.refreshProjects(); return result;
+    } catch (error) {
+      if (store === this.state.store && this.payload() !== payload) this.fail(new Error('Có chỉnh sửa mới trong bộ nhớ khi nhận cloud. Bản trong bộ nhớ vẫn còn; hãy xuất file hoặc lưu thành sơ đồ mới trước khi tải lại.'));
+      throw error;
+    } finally { this.externalUpdating = false; this.publish({ busy: false }); }
+  }
   private async action(work: () => Promise<void>) {
     if (this.state.busy) throw new Error('Đang xử lý dự án, vui lòng chờ.');
     this.publish({ busy: true });

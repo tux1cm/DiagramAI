@@ -97,7 +97,7 @@ test('narrow viewport uses the original overlay sidebar without a new layout', a
 test('modal traps focus and P2 engine tools are enabled', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('toolbar', { name: 'Công cụ canvas', exact: true }).getByRole('button', { name: 'Di chuyển canvas (Space)', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Hướng dẫn và trạng thái P3', exact: true }).click();
+  await page.getByRole('button', { name: 'Hướng dẫn và trạng thái P5', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('link', { name: 'Kiểm tra nền tảng', exact: true })).toBeFocused();
   await page.keyboard.press('Shift+Tab');

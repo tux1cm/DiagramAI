@@ -1,10 +1,32 @@
 name: CI
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_regression:
+        description: Run full P0–P5 regression (owner request / P7)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   web:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: diagramai_sync_ci
+          POSTGRES_PASSWORD: diagramai_sync_ci
+          POSTGRES_DB: diagramai_sync_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U diagramai_sync_ci -d diagramai_sync_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DIAGRAMAI_SYNC_CI_DATABASE_URL: postgresql://diagramai_sync_ci:diagramai_sync_ci@127.0.0.1:5432/diagramai_sync_ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -13,15 +35,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run prepare:reference
-      - run: npm run check
+      - run: npm run check:p5
+      - name: P5 private API, CAS, pairing and P4 persistence boundary
+        run: npm run test:p5:neon
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm run test:p5:web
+      - name: Full regression only when explicitly requested
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_regression }}
+        run: npm test && npm run test:e2e
         env:
           VITE_BASE_PATH: /p0-subpath/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: p0-test-evidence
+          name: p5-focused-test-evidence
           path: |
             playwright-report/
             test-results/

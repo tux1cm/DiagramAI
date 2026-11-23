@@ -1,10 +1,11 @@
 import { parseDocument, serializeDocument, type DiagramDocument } from '@diagramai/diagram-core';
+import type { SyncBackend } from './sync-types';
 
 export const MAX_DOCUMENT_BYTES = 2 * 1024 * 1024;
 export interface ProjectSummary { documentId: string; title: string; version: number; savedAt: number; nodeCount: number; edgeCount: number }
 export interface StoredProject extends ProjectSummary { payload: string; hash: string; operationId: string }
 export interface SaveRequest { document: DiagramDocument; expectedVersion: number | null; operationId: string }
-export interface LocalRepository {
+export interface LocalRepository extends SyncBackend {
   readonly kind: 'indexeddb' | 'sqlite';
   list(): Promise<ProjectSummary[]>;
   load(documentId: string): Promise<StoredProject | null>;

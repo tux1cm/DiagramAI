@@ -1,6 +1,6 @@
 # P4 — Lưu local, file và Desktop Light
 
-Ngày: 2026-11-20. **P4 đạt kiểm thử kỹ thuật Web/Desktop, CI/Pages và live; chờ chủ dự án nghiệm thu.** P3 được chốt trước khi bắt đầu; không chuyển P5.
+Ngày: 2026-11-20. **P4 đã được chủ dự án nghiệm thu trước khi bắt đầu P5.** Bằng chứng dưới đây là bộ kiểm thử P4 tại thời điểm chốt; tiến độ mới tại [`p5-status.md`](p5-status.md). Theo yêu cầu mới, chỉ test tính năng P5 và điểm nối P4→P5; full regression để cuối P7.
 
 ## Đã triển khai
 
