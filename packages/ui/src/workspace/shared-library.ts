@@ -103,5 +103,6 @@ export class SharedLibrary {
     }
     await this.session.refreshProjects();
     if (errors.length) throw errors[0];
+    this.publish({ error: '' });
   }
 }

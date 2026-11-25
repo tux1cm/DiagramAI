@@ -19,6 +19,7 @@ export class SqliteRepository implements LocalRepository, SyncBackend {
   syncCredential(deviceId: string) { return call<string | null>('sync_credential', { deviceId }); }
   shareCredentialWrite(access: ShareAccess) { return call<void>('share_credential_write', { access: ShareAccessSchema.parse(access) }); }
   async shareCatalogRead(id: string) { const value = await call<unknown>('share_catalog_read', { id }); return value === null ? null : ShareCatalogSchema.parse(value); }
+  async workspaceArchives() { return (await call<unknown[]>('workspace_archives')).map((value) => WorkspaceStateSchema.parse(value)); }
   shareCatalogWrite(catalog: ShareCatalog) { return call<void>('share_catalog_write', { catalog: ShareCatalogSchema.parse(catalog) }); }
   shareContextRead() { return call<string | null>('share_context_read'); }
   shareContextWrite(id: string | null) { if (id !== null) ShareAccessSchema.shape.id.parse(id); return call<void>('share_context_write', { id }); }

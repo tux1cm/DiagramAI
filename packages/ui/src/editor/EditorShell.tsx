@@ -36,7 +36,7 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace,
   const saveStatus = { loading: 'Đang mở…', dirty: 'Chưa lưu · Có thay đổi', saving: 'Đang lưu trên máy…', saved: 'Đã lưu trên máy', error: 'Lỗi lưu trên máy', conflict: 'Xung đột · Chưa lưu' }[local.status];
   const browsing = shared.active ? shared.view !== 'editor' || !shared.catalog : workspace.view !== 'editor';
   const browse = () => { setDialog(null); if (shared.active) shared.library.showList(); else workspace.library.showProjects(); };
-  const cloudStatus = manual.busy ? 'Đang đồng bộ…' : manual.error ? 'Chưa đồng bộ hết' : manual.pending ? 'Chờ đồng bộ' : !workspace.state && !shared.active && !cloud.link ? 'Chỉ local' : manual.lastSyncedAt ? 'Đã đồng bộ lần gần nhất' : 'Bấm Đồng bộ để cập nhật';
+  const cloudStatus = manual.busy ? 'Đang đồng bộ…' : manual.error || workspace.error || shared.error ? 'Chưa đồng bộ hết' : manual.pending ? 'Chờ đồng bộ' : !workspace.state && !shared.active && !cloud.link ? 'Chỉ local' : manual.lastSyncedAt ? 'Đã đồng bộ lần gần nhất' : 'Bấm Đồng bộ để cập nhật';
   useEffect(() => { if (!notice) return; const timeout = setTimeout(() => setNotice(''), 5000); return () => clearTimeout(timeout); }, [notice]);
   const execute = useCallback((commands: DiagramCommand[], label: string) => executeSafely(store, commands, label, onError), [store, onError]);
   const remove = useCallback(() => { const selected = store.getSnapshot().selection; if (selected.nodeIds.length || selected.edgeIds.length) execute([{ type: 'remove', ...selected }], 'Xóa đối tượng'); }, [store, execute]);

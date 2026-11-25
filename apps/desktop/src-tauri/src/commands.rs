@@ -25,3 +25,4 @@ async fn blocking<T: Send + 'static>(work: impl FnOnce() -> storage::Result<T> +
 #[tauri::command] pub async fn share_catalog_write(state: Shared<'_>,catalog:serde_json::Value)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write_share_catalog(&p,catalog)).await}
 #[tauri::command] pub async fn share_context_read(state: Shared<'_>)->storage::Result<Option<String>> {let p=path(&state)?;blocking(move||crate::workspace::read_share_context(&p)).await}
 #[tauri::command] pub async fn share_context_write(state: Shared<'_>,id:Option<String>)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write_share_context(&p,id)).await}
+#[tauri::command] pub async fn workspace_archives(state: Shared<'_>)->storage::Result<Vec<serde_json::Value>> {let p=path(&state)?;blocking(move||crate::workspace::archives(&p)).await}

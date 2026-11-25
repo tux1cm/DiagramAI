@@ -10,3 +10,9 @@ Ngày 2026-11-25, theo điều chỉnh của chủ dự án sau nghiệm thu Kho
 - Web không thể bảo đảm await network trong unload hoặc đóng cửa sổ ẩn danh. Cảnh báo khi còn thay đổi chưa lưu/gửi, hướng dẫn Đồng bộ trước khi đóng; không dùng beacon thiếu bearer hoặc đánh dấu ACK giả.
 - Trạng thái header là toàn kho và lần đồng bộ gần nhất; không dùng trạng thái của một bản đang mở để khẳng định toàn kho đã cập nhật. Thiết bị nhận cũng cần bấm Đồng bộ để nhận thay đổi mới.
 - Không thay API/schema, quota, quyền share, dữ liệu cũ, Neon project hoặc billing; không làm P6/AI.
+
+## Chọn kho Web làm kho chung
+
+Read-only production diagnostic thấy hai workspace khác nhau có Project cùng tên SNP, tổng cộng một drawing đã publish. Chủ chọn dùng kho Web. UI hiển thị ID kho không bí mật để phân biệt, không hiển thị key ngoài thao tác riêng.
+
+Đổi kho cần link riêng hợp lệ và checkbox xác nhận rõ ràng. IndexedDB/SQLite CAS kiểm tra ID + generation cũ; cùng transaction archive nguyên catalog cũ, giữ nguyên credential/outbox/records và đổi active workspace. Không tự gộp, không xóa cloud hoặc local. Có nút mở lại archive bằng credential đã lưu. Hàng đợi archive không tự gửi vào kho đang mở; chỉ tiếp tục khi khôi phục kho đó. Share scope vẫn không được biết workspace ID/key.

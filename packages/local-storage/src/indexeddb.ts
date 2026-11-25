@@ -86,6 +86,10 @@ export class IndexedDbRepository implements LocalRepository, SyncBackend {
     const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get('workspace-v1'));
     return record ? WorkspaceStateSchema.parse(record.value) : null;
   }
+  async workspaceArchives(): Promise<WorkspaceState[]> {
+    const records = await this.read<{ key: string; value: unknown }[]>('settings', (store) => store.getAll());
+    return records.filter((item) => item.key.startsWith('workspace-archive:')).map((item) => WorkspaceStateSchema.parse(item.value));
+  }
   async workspaceWrite(input: WorkspaceCommit) {
     checkWorkspaceCommit(input); const db = await this.open();
     return new Promise<void>((resolve, reject) => {
@@ -94,8 +98,20 @@ export class IndexedDbRepository implements LocalRepository, SyncBackend {
       const store = tx.objectStore('settings'), current = store.get('workspace-v1');
       current.onsuccess = () => {
         const old = current.result?.value as WorkspaceState | undefined;
-        if ((old?.generation ?? null) !== input.expectedGeneration || old && old.id !== input.state.id) { conflict = true; tx.abort(); return; }
+        if ((old?.generation ?? null) !== input.expectedGeneration || old && old.id !== (input.switchFromId ?? input.state.id)) { conflict = true; tx.abort(); return; }
         if (!old && !input.key) { tx.abort(); return; }
+        if (input.switchFromId) {
+          if (!old) { conflict = true; tx.abort(); return; }
+          const previous = tx.objectStore('device_credentials').get(input.state.id);
+          previous.onsuccess = () => {
+            if (previous.result && previous.result.token !== input.key) { tx.abort(); return; }
+            store.put({ key: `workspace-archive:${old.id}`, value: old });
+            store.delete(`workspace-archive:${input.state.id}`);
+            tx.objectStore('device_credentials').put({ deviceId: input.state.id, token: input.key });
+            store.put({ key: 'workspace-v1', value: input.state });
+          };
+          return;
+        }
         if (old && input.key) {
           const previous = tx.objectStore('device_credentials').get(input.state.id);
           previous.onsuccess = () => { if (previous.result?.token !== input.key) { tx.abort(); return; } store.put({ key: 'workspace-v1', value: input.state }); };

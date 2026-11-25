@@ -44,6 +44,33 @@ async function local(api: SyncClient, factory = new IDBFactory(), name = newId()
   return { repo, session, library, factory, name };
 }
 describe('workspace catalog → P5 journal recovery boundary', () => {
+  it('explicitly switches to the Web workspace, archives the Desktop catalog/queue/key atomically, and can restore it', async () => {
+    const webCloud = fakeCloud(), deskCloud = fakeCloud(), web = await local(webCloud.api), desk = await local(deskCloud.api);
+    await web.library.create(); await web.library.createDrawing('Web shared drawing'); await web.library.synchronize(true);
+    await desk.library.create(); await desk.library.createDrawing('Desktop unsent drawing');
+    const old = (await desk.repo.workspaceRead())!, key = (await desk.repo.syncCredential(old.id))!;
+    const webState = (await web.repo.workspaceRead())!, webAccess = { id: webState.id, key: (await web.repo.syncCredential(webState.id))! };
+    const target = new WorkspaceLibrary(desk.session, webCloud.api, async () => {}); await target.initialize();
+    await expect(target.connect(webAccess)).rejects.toThrow('xác nhận');
+    expect((await desk.repo.workspaceRead())?.id).toBe(old.id);
+    await expect(target.connect({ ...webAccess, key: 'bad-key' }, true)).rejects.toThrow();
+    expect((await desk.repo.workspaceRead())?.id).toBe(old.id);
+    expect(await desk.repo.workspaceArchives()).toHaveLength(0);
+    await target.connect(webAccess, true);
+    expect((await desk.repo.workspaceRead())?.id).toBe(webState.id);
+    expect(await desk.repo.workspaceArchives()).toEqual([old]);
+    expect(await desk.repo.syncCredential(old.id)).toBe(key);
+    expect((await desk.repo.list()).map((item) => item.title)).toEqual(expect.arrayContaining(['Desktop unsent drawing', 'Web shared drawing']));
+    expect(webCloud.catalog.drawings.map((item) => item.title)).not.toContain('Desktop unsent drawing');
+    expect(await hasPendingCloud(desk.session)).toBe(false); // archived pending is NOT uploaded into the active scope
+    const back = new WorkspaceLibrary(desk.session, deskCloud.api, async () => {}); await back.initialize();
+    await back.restoreWorkspace(old.id);
+    expect((await desk.repo.workspaceRead())?.id).toBe(old.id);
+    expect((await desk.repo.workspaceRead())?.drawings.map((item) => item.localId)).toEqual(old.drawings.map((item) => item.localId));
+    expect(deskCloud.catalog.drawings.map((item) => item.title)).toContain('Desktop unsent drawing');
+    expect((await desk.repo.workspaceArchives())[0].id).toBe(webState.id);
+    web.session.dispose(); desk.session.dispose();
+  });
   it('creates Projects/drawings locally on BOTH platforms and exchanges them only on explicit full sync', async () => {
     const cloud = fakeCloud(), web = await local(cloud.api); await web.library.create();
     const desk = await local(cloud.api), state = (await web.repo.workspaceRead())!;

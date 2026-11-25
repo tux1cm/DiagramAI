@@ -2,9 +2,9 @@ import { newId } from '@diagramai/diagram-core';
 import { decodeRecord, LocalSyncJournal, WorkspaceJournal, type ProjectSession, type WorkspaceState } from '@diagramai/local-storage';
 import { snapshotHash, SyncApiError, SyncClient, workspaceLink, workspaceLocalId, shareLink, type WorkspaceAccess } from '@diagramai/sync-core';
 
-export interface LibrarySnapshot { loading: boolean; busy: boolean; state: WorkspaceState | null; error: string; view: 'projects' | 'drawings' | 'editor' }
+export interface LibrarySnapshot { loading: boolean; busy: boolean; state: WorkspaceState | null; archives: WorkspaceState[]; error: string; view: 'projects' | 'drawings' | 'editor' }
 export class WorkspaceLibrary {
-  private snapshot: LibrarySnapshot = { loading: true, busy: false, state: null, error: '', view: 'editor' };
+  private snapshot: LibrarySnapshot = { loading: true, busy: false, state: null, archives: [], error: '', view: 'editor' };
   private listeners = new Set<() => void>();
   private journal: WorkspaceJournal;
   private syncJournal: LocalSyncJournal;
@@ -16,7 +16,7 @@ export class WorkspaceLibrary {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private publish(patch: Partial<LibrarySnapshot>) { this.snapshot = { ...this.snapshot, ...patch }; for (const listener of this.listeners) listener(); }
   private api() { if (!this.client) throw new Error('Chưa cấu hình API kho chung. Dữ liệu local vẫn được giữ.'); return this.client; }
-  private async reload() { const state = await this.session.repository.workspaceRead(); this.publish({ state, loading: false }); return state; }
+  private async reload() { const state = await this.session.repository.workspaceRead(), archives = await this.session.repository.workspaceArchives(); this.publish({ state, archives, loading: false }); return state; }
   async initialize() { await this.session.initialize(); await this.reload(); }
   private async access(): Promise<WorkspaceAccess> {
     const state = await this.session.repository.workspaceRead();
@@ -46,21 +46,40 @@ export class WorkspaceLibrary {
     await this.session.repository.workspaceWrite({ expectedGeneration: null, state, key });
     await this.reload(); await this.synchronize(true);
   }
-  async connect(access: WorkspaceAccess) {
+  async connect(access: WorkspaceAccess, switchConfirmed = false) {
     await this.session.flush();
+    this.publish({ busy: true });
+    try {
     const old = await this.session.repository.workspaceRead();
     if (old) {
-      if (old.id !== access.id || (await this.access()).key !== access.key) throw new Error('Máy này đang nhớ kho khác. Không đổi kho hoặc bỏ hàng đợi chưa gửi tự động.');
-      await this.synchronize(true); return;
+      if (old.id === access.id) {
+        if ((await this.access()).key !== access.key) throw new Error('Quyền kho không khớp. Không thay khóa đã lưu.');
+        await this.synchronize(true); return;
+      }
+      if (!switchConfirmed) throw new Error('Máy này đang nhớ kho khác. Dùng mục Kết nối thiết bị của tôi để xác nhận đổi kho và giữ kho cũ.');
+      if (this.running) throw new Error('Hãy chờ lần đồng bộ hiện tại kết thúc trước khi đổi kho.');
     }
     const catalog = await this.api().workspaceCatalog(access), folderId = catalog.folders[0]?.id ?? newId();
-    const state: WorkspaceState = { id: access.id, generation: 1, provisionPending: false, selectedFolderId: folderId,
+    const archived = old ? (await this.session.repository.workspaceArchives()).find((item) => item.id === access.id) : undefined;
+    const state: WorkspaceState = { ...archived, id: access.id, generation: (old?.generation ?? 0) + 1, provisionPending: false, selectedFolderId: archived?.selectedFolderId ?? folderId,
       folders: catalog.folders.length ? catalog.folders.map((folder) => ({ ...folder, pending: false })) : [{ id: folderId, title: 'Dự án đầu tiên', pending: true }],
-      drawings: [], ignoredLocalIds: (await this.session.repository.list()).map((record) => record.documentId) };
-    await this.session.repository.workspaceWrite({ expectedGeneration: null, state, key: access.key });
+      drawings: archived?.drawings ?? [], ignoredLocalIds: (await this.session.repository.list()).filter((record) => !archived?.drawings.some((item) => item.localId === record.documentId)).map((record) => record.documentId) };
+    if (archived) state.folders.push(...archived.folders.filter((folder) => folder.pending && !state.folders.some((item) => item.id === folder.id)));
+    await this.session.repository.workspaceWrite({ expectedGeneration: old?.generation ?? null, state, key: access.key, ...(old ? { switchFromId: old.id } : {}) });
     await this.reload(); await this.synchronize(true);
+    if (old && this.snapshot.state?.drawings[0]) await this.session.openProject(this.snapshot.state.drawings[0].localId);
+    } finally { this.publish({ busy: Boolean(this.running) }); }
   }
-  async shareLink(base: string) { return workspaceLink(base, await this.access()); }
+  async restoreWorkspace(id: string) {
+    const key = await this.session.repository.syncCredential(id);
+    if (!key) throw new Error('Không đọc được quyền kho đã lưu.');
+    this.showProjects(); await this.connect({ id, key }, true);
+  }
+  async shareLink(base: string) {
+    if (this.running) await this.running;
+    if ((await this.session.repository.workspaceRead())?.provisionPending) await this.synchronize(true);
+    return workspaceLink(base, await this.access());
+  }
   showProjects = () => this.publish({ view: 'projects' });
   showEditor = () => this.publish({ view: 'editor' });
   async createScopedLink(base: string, kind: 'project' | 'drawing', targetId: string) {

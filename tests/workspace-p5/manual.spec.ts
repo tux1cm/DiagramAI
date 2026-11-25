@@ -45,3 +45,34 @@ test('manual sync exchanges newly created drawings both ways; editing, focus, re
     await closeLibrary(page);
   } finally { await context.close(); }
 });
+
+test('two identically named Projects in different workspaces are distinct; explicit switch keeps old local drawings and can restore the old workspace', async ({ page, browser, baseURL }) => {
+  const web = await createWorkspace(page), context = await browser.newContext({ baseURL }), desk = await context.newPage();
+  try {
+    const previous = await createWorkspace(desk);
+    const oldId = await desk.getByLabel('Mã kho đang mở', { exact: true }).textContent();
+    const webId = await page.getByLabel('Mã kho đang mở', { exact: true }).textContent();
+    expect(oldId).not.toBe(webId);
+    // Both catalogs initially use the same default Project name; names are not identity.
+    await desk.getByRole('button', { name: 'Dự án đầu tiên', exact: true }).click();
+    await desk.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture old Desktop pending');
+    await desk.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click(); await ready(desk);
+    await openLibrary(desk);
+    await desk.getByText('Kết nối thiết bị của tôi', { exact: true }).click();
+    await desk.getByRole('textbox', { name: 'Link kho chung từ Web hoặc Desktop', exact: true }).fill(web.link);
+    const switchButton = desk.getByRole('button', { name: 'Dùng kho này và giữ kho cũ', exact: true });
+    await expect(switchButton).toBeDisabled();
+    await desk.getByRole('checkbox', { name: /Tôi xác nhận đổi kho/ }).check(); await switchButton.click();
+    await expect(desk.getByLabel('Mã kho đang mở', { exact: true })).toHaveText(webId!);
+    await openWorkspaceDrawing(desk, web.title);
+    await openLibrary(desk); await desk.getByRole('button', { name: 'File / Bản vẽ chỉ trên máy / Checkpoint', exact: true }).click();
+    await expect(desk.locator('.project-list')).toContainText(previous.title);
+    await expect(desk.locator('.project-list')).toContainText('P5 fixture old Desktop pending');
+    await closeLibrary(desk); await openLibrary(desk);
+    await desk.getByText('Kết nối thiết bị của tôi', { exact: true }).click();
+    await desk.getByRole('checkbox', { name: /Tôi xác nhận đổi kho/ }).check();
+    await desk.getByRole('button', { name: `Mở lại kho ${oldId}`, exact: true }).click();
+    await expect(desk.getByLabel('Mã kho đang mở', { exact: true })).toHaveText(oldId!);
+    await openWorkspaceDrawing(desk, 'P5 fixture old Desktop pending');
+  } finally { await context.close(); }
+});

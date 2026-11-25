@@ -6,6 +6,7 @@
 .workspace-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 16px 0; }
 .workspace-form label { flex: 1; min-width: 180px; }
 .workspace-form input { display: block; width: 100%; }
+.workspace-form input[type="checkbox"] { display: inline; width: auto; }
 .workspace-browser { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); gap: 16px; }
 .workspace-browser nav { display: flex; flex-direction: column; gap: 8px; }
 .workspace-browser nav button { white-space: normal; overflow-wrap: anywhere; text-align: left; }

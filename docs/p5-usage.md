@@ -8,6 +8,17 @@
 - Web: bấm Đồng bộ trước khi đóng tab. Trình duyệt không bảo đảm chờ request async lúc đóng; app cảnh báo khi còn thay đổi chưa gửi. Không tuyên bố đã đồng bộ chỉ vì tab đóng. Dữ liệu của cửa sổ ẩn danh có thể mất khi đóng toàn bộ cửa sổ ẩn danh, kể cả bản local đã lưu.
 - Mở link mới, tạo kho và Chia sẻ là thao tác cloud chủ động. Mở lại kho/share đã nhớ chỉ đọc cache local; muốn cập nhật cloud bấm Đồng bộ. Không đổi phạm vi quyền link.
 
+## Web có bản vẽ nhưng Desktop chỉ thấy Project trùng tên
+
+Tên Project không phải mã kho. Trong Kho có **Mã kho đang mở**: Web/Desktop phải cùng mã, không chỉ cùng tên “SNP”. Nếu đã tạo hai kho riêng:
+
+1. Trên **Web có bản vẽ**, bấm Đồng bộ; vào **Kho → Kết nối thiết bị của tôi → Hiện link riêng của kho**, sao chép link.
+2. Trên **Desktop**, vào **Kho → Kết nối thiết bị của tôi**, dán vào **Link kho chung từ Web hoặc Desktop**.
+3. Tích xác nhận giữ kho cũ và mọi bản local → **Dùng kho này và giữ kho cũ**. Chỉ đổi sau khi xác minh được quyền kho đích; catalog cũ được lưu cùng transaction trước khi thay kho đang mở. Không xóa bản vẽ, liên kết, hàng đợi hay key cũ.
+4. Kiểm tra mã kho hai bên giống nhau. Kho cũ nằm ở **Kho cũ được giữ**; có thể xác nhận và mở lại. Nội dung/hàng đợi kho cũ không tự gửi sang kho Web, không tự gộp theo tên; muốn đưa bản cũ vào kho khác cần xử lý quyền riêng, không lách editor thành owner.
+
+**Không gửi link riêng vào chat hoặc ảnh. Không xóa dữ liệu ứng dụng để đổi kho.**
+
 ## Kho và chia sẻ Project/bản vẽ
 
 - Bấm **Kho** ở rail trái hoặc thanh trên: vùng giữa hiện các thẻ Project, không popup. Mở Project để thấy các thẻ bản vẽ; mở bản vẽ để vào editor. Thanh trên hiện **Project / Tên bản vẽ**.

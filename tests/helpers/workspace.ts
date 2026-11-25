@@ -30,6 +30,9 @@ export async function createWorkspace(page: Page, navigate = true) {
   const title = `P5 fixture workspace ${randomUUID().slice(0, 8)}`;
   await renameDrawing(page, title); await openLibrary(page);
   await page.getByRole('button', { name: 'Tạo kho riêng và đưa bản vẽ trên máy vào kho', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Dự án đầu tiên', exact: true })).toBeVisible({ timeout: 20000 });
+  await updateLibrary(page);
+  await expect(page.getByTitle('Trạng thái đồng bộ', { exact: true })).toContainText('Đã đồng bộ', { timeout: 20000 });
   await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
   await page.getByText('Kết nối thiết bị của tôi', { exact: true }).click();
   await page.getByRole('button', { name: 'Hiện link riêng của kho', exact: true }).click();
