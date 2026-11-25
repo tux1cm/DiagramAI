@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { SyncClient, workspaceLink } from '@diagramai/sync-core';
 import { ready } from './drawing';
 
 export async function openLibrary(page: Page) {
@@ -29,17 +30,31 @@ export async function createWorkspace(page: Page, navigate = true) {
   if (navigate) await page.goto('./'); await ready(page);
   const title = `P5 fixture workspace ${randomUUID().slice(0, 8)}`;
   await renameDrawing(page, title); await openLibrary(page);
-  await page.getByRole('button', { name: 'Tạo kho riêng và đưa bản vẽ trên máy vào kho', exact: true }).click();
+  // Provision a disposable test fixture through the API, not through a public
+  // per-device "create another workspace" button. The product opens one main link.
+  const access = { id: randomUUID(), key: `dai_workspace_v1_${randomBytes(32).toString('base64url')}` };
+  const api = new SyncClient(process.env.DIAGRAMAI_NATIVE_MANAGED_API ?? process.env.DIAGRAMAI_MANAGED_TEST_API ?? 'http://127.0.0.1:8787/');
+  try {
+  await api.createWorkspace(access);
+  await api.workspaceFolder(access, { id: randomUUID(), title: 'Dự án đầu tiên' });
+  const currentUrl = new URL(page.url());
+  const link = workspaceLink(currentUrl.hostname === 'tauri.localhost' || currentUrl.protocol === 'tauri:' ? 'https://tux1cm.github.io/DiagramAI/' : `${currentUrl.origin}${currentUrl.pathname}`, access);
+  await expect(page.getByRole('button', { name: 'Tạo kho riêng và đưa bản vẽ trên máy vào kho', exact: true })).toHaveCount(0);
+  await connectWorkspace(page, link, false);
   await expect(page.getByRole('button', { name: 'Dự án đầu tiên', exact: true })).toBeVisible({ timeout: 20000 });
+  await page.getByRole('button', { name: 'Dự án đầu tiên', exact: true }).click();
+  await page.getByRole('button', { name: 'Đưa bản đang mở vào dự án này', exact: true }).click();
   await updateLibrary(page);
   await expect(page.getByTitle('Trạng thái đồng bộ', { exact: true })).toContainText('Đã đồng bộ', { timeout: 20000 });
   await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
-  await page.getByText('Kết nối thiết bị của tôi', { exact: true }).click();
-  await page.getByRole('button', { name: 'Hiện link riêng của kho', exact: true }).click();
-  const field = page.getByRole('textbox', { name: 'Link chia sẻ', exact: true });
-  await expect(field).toBeVisible(); const link = await field.inputValue();
+  await openLibrary(page);
+  await page.getByText('Link kho chính của tôi', { exact: true }).click();
+  await page.getByRole('button', { name: 'Hiện link kho chính', exact: true }).click();
+  const field = page.getByRole('textbox', { name: 'Link kho chính', exact: true });
+  await expect(field).toBeVisible(); expect((await field.inputValue()) === link).toBe(true);
   await page.getByRole('button', { name: 'Ẩn link', exact: true }).click();
-  return { title, link };
+  return { title, link, access };
+  } catch (error) { await api.deleteWorkspace(access).catch(() => {}); throw error; }
 }
 export async function connectWorkspace(page: Page, link: string, viaFragment = true) {
   const base = new URL(page.url() === 'about:blank' ? 'http://127.0.0.1:4173/p5-test/' : page.url());
@@ -49,8 +64,8 @@ export async function connectWorkspace(page: Page, link: string, viaFragment = t
     await openLibrary(page);
     await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
   } else {
-    await openLibrary(page); await page.getByRole('textbox', { name: 'Link riêng vào kho', exact: true }).fill(link);
-    await page.getByRole('button', { name: 'Mở kho bằng link riêng', exact: true }).click();
+    await openLibrary(page); await page.getByRole('textbox', { name: 'Link kho chính để mở', exact: true }).fill(link);
+    await page.getByRole('button', { name: 'Mở kho chính', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
   }
 }

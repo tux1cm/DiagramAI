@@ -47,6 +47,11 @@ test('Kho uses main-area cards; Project and drawing links allow editing but neve
     await second.setOffline(true); await editCloudNode(one, 'Sửa từ link bản vẽ', 'Link offline còn nguyên'); await one.reload(); await ready(one);
     await expect(nodeModel(one, 'Link offline còn nguyên')).toBeVisible(); await second.setOffline(false); await syncNow(one);
     await syncNow(page); await closeCloud(page); await expect(nodeModel(page, 'Link offline còn nguyên')).toBeVisible();
+    await openLibrary(one); await one.getByRole('button', { name: 'Về kho của tôi', exact: true }).click();
+    await expect(one.getByRole('heading', { name: 'Mở kho chính', exact: true })).toBeVisible();
+    await expect(one.getByRole('textbox', { name: 'Link kho chính để mở', exact: true })).toBeEmpty();
+    await expect(one.getByRole('button', { name: 'Project khác', exact: true })).toHaveCount(0);
+    await expect(one.getByRole('button', { name: 'Tạo kho riêng và đưa bản vẽ trên máy vào kho', exact: true })).toHaveCount(0);
     await openLibrary(page); await page.screenshot({ path: testInfo.outputPath('project-cards.png') });
   } finally { await context.close(); await second.close(); }
 });

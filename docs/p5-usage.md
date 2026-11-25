@@ -1,20 +1,28 @@
 # P5 — Kho riêng chung Web ↔ Desktop
 
+## Chỉ dùng một link kho chính
+
+- **Bạn:** dùng cùng **link kho chính** trên Web/Desktop. App nhớ quyền sau lần mở đầu; không cần tài khoản, mã quản trị, ghép từng bản vẽ hoặc tạo kho riêng trên từng máy.
+- Web có dữ liệu: **Kho → Link kho chính của tôi → Hiện link kho chính**. Mở link này trên Web khác hoặc dán vào **Mở kho chính** trên Desktop. Nếu Desktop đang nhớ kho khác, dán trong **Link kho chính của tôi → Mở link kho chính khác**, xác nhận giữ kho cũ → **Dùng link kho chính này**.
+- Mở link trực tiếp trên Web đang nhớ kho khác sẽ hiện xác nhận dùng link vừa mở; không tự thay kho hoặc yêu cầu dán lại. Mã kho cho biết hai bên có đang dùng đúng cùng kho hay không.
+- **Người nhận:** chỉ gửi link từ **Chia sẻ** trên thẻ Project/bản vẽ. Họ mở trực tiếp và chỉ quản lý nội dung trong phạm vi link. Không gửi link kho chính cho người nhận; ai có link kho chính sẽ có quyền toàn kho.
+- App không còn nút tạo kho riêng trên mỗi thiết bị. Chưa có link thì vẫn giữ/sửa local; không tự đọc dữ liệu toàn kho từ Neon.
+
 ## Đồng bộ thủ công hai chiều (điều chỉnh 2026-11-25)
 
 - Cả Web và Desktop tạo được Project/bản vẽ trong cùng kho. Tạo/sửa ở máy A → **Đồng bộ** để gửi → máy B bấm **Đồng bộ** để nhận. Nút này xử lý danh sách Project, bản vẽ mới và nội dung toàn kho, không chỉ bản đang mở. **Cập nhật kho ngay** và **Đồng bộ ngay** dùng cùng luồng.
 - Tự lưu local vẫn bật. Không tự gửi/nhận cloud theo từng lần sửa, bộ hẹn giờ 15 giây, focus hay online. Project/bản vẽ mới giữ cờ chờ gửi cho đến khi có ACK; một lần gửi lỗi không chặn nhận các bản khác.
 - Desktop: bấm đóng cửa sổ sẽ lưu local, thử đồng bộ hết rồi thoát. Nếu mất mạng/thiếu quyền/xung đột, app hỏi có thoát khi chưa đồng bộ hay không; không xóa hàng đợi. Nếu local chưa lưu được có cảnh báo riêng.
 - Web: bấm Đồng bộ trước khi đóng tab. Trình duyệt không bảo đảm chờ request async lúc đóng; app cảnh báo khi còn thay đổi chưa gửi. Không tuyên bố đã đồng bộ chỉ vì tab đóng. Dữ liệu của cửa sổ ẩn danh có thể mất khi đóng toàn bộ cửa sổ ẩn danh, kể cả bản local đã lưu.
-- Mở link mới, tạo kho và Chia sẻ là thao tác cloud chủ động. Mở lại kho/share đã nhớ chỉ đọc cache local; muốn cập nhật cloud bấm Đồng bộ. Không đổi phạm vi quyền link.
+- Mở link mới và Chia sẻ là thao tác cloud chủ động. Mở lại kho/share đã nhớ chỉ đọc cache local; muốn cập nhật cloud bấm Đồng bộ. Không đổi phạm vi quyền link.
 
 ## Web có bản vẽ nhưng Desktop chỉ thấy Project trùng tên
 
 Tên Project không phải mã kho. Trong Kho có **Mã kho đang mở**: Web/Desktop phải cùng mã, không chỉ cùng tên “SNP”. Nếu đã tạo hai kho riêng:
 
-1. Trên **Web có bản vẽ**, bấm Đồng bộ; vào **Kho → Kết nối thiết bị của tôi → Hiện link riêng của kho**, sao chép link.
-2. Trên **Desktop**, vào **Kho → Kết nối thiết bị của tôi**, dán vào **Link kho chung từ Web hoặc Desktop**.
-3. Tích xác nhận giữ kho cũ và mọi bản local → **Dùng kho này và giữ kho cũ**. Chỉ đổi sau khi xác minh được quyền kho đích; catalog cũ được lưu cùng transaction trước khi thay kho đang mở. Không xóa bản vẽ, liên kết, hàng đợi hay key cũ.
+1. Trên **Web có bản vẽ**, bấm Đồng bộ; vào **Kho → Link kho chính của tôi → Hiện link kho chính**, sao chép link.
+2. Trên **Desktop**, vào **Kho → Link kho chính của tôi**, dán vào **Mở link kho chính khác**.
+3. Tích xác nhận giữ kho cũ và mọi bản local → **Dùng link kho chính này**. Chỉ đổi sau khi xác minh được quyền kho đích; catalog cũ được lưu cùng transaction trước khi thay kho đang mở. Không xóa bản vẽ, liên kết, hàng đợi hay key cũ.
 4. Kiểm tra mã kho hai bên giống nhau. Kho cũ nằm ở **Kho cũ được giữ**; có thể xác nhận và mở lại. Nội dung/hàng đợi kho cũ không tự gửi sang kho Web, không tự gộp theo tên; muốn đưa bản cũ vào kho khác cần xử lý quyền riêng, không lách editor thành owner.
 
 **Không gửi link riêng vào chat hoặc ảnh. Không xóa dữ liệu ứng dụng để đổi kho.**
@@ -26,13 +34,13 @@ Tên Project không phải mã kho. Trong Kho có **Mã kho đang mở**: Web/De
 - Bấm **Chia sẻ** trên thẻ bản vẽ để tạo link chỉ xem/sửa bản đó, không thấy bản khác. Không chọn quyền và không đăng nhập. Ai có link đều chỉnh sửa được trong phạm vi link.
 - Web: mở link trực tiếp. Desktop: **Kho → Mở link Project / bản vẽ**, dán link và mở. App nhớ context/capability sau reload/restart; có cache local khi offline.
 - Link giới hạn không thay kho riêng của người nhận và không tự đưa nội dung nhận qua share vào kho của họ. Link không cấp quản trị kho/thiết bị hoặc recovery.
-- **Kết nối thiết bị của tôi → Hiện link riêng của kho** là quyền toàn kho dành cho chủ. Không dùng link này để thay link Chia sẻ trên thẻ.
+- **Link kho chính của tôi → Hiện link kho chính** là quyền toàn kho dành cho chủ. Không dùng link này để thay link Chia sẻ trên thẻ.
 
 ## Cách dùng mới: một kho, không ghép từng bản
 
-1. Mở **Quản lý** (nút ở rail trái hoặc thanh trên). Trên máy có bản vẽ muốn dùng làm nguồn, chọn **Tạo kho riêng và đưa bản vẽ trên máy vào kho**. Các bản hiện có vào **Dự án đầu tiên**, không gộp theo tên.
-2. Chọn **Hiện link riêng của kho**, sao lưu toàn bộ link vào nơi riêng tư. **Ai có link có quyền truy cập toàn bộ kho**; không gửi link vào chat hoặc đăng công khai. Link không chứa mật khẩu Neon.
-3. Trên Web, mở link đó; trên Desktop, dán link vào **Quản lý → Đã có kho? Dán link riêng → Mở kho bằng link riêng**. Chỉ làm lần đầu, thiết bị/trình duyệt sẽ nhớ kho. Không ghép mã cho từng bản vẽ.
+1. Mở **Kho** (nút ở rail trái hoặc thanh trên). Dùng link kho chính đã có, không tạo kho khác theo từng thiết bị.
+2. Chọn **Link kho chính của tôi → Hiện link kho chính**, sao lưu toàn bộ link vào nơi riêng tư. **Ai có link có quyền truy cập toàn bộ kho**; không gửi link vào chat hoặc đăng công khai. Link không chứa mật khẩu Neon.
+3. Trên Web, mở link đó; trên Desktop chưa có kho, dán vào **Kho → Mở kho chính**. Chỉ làm lần đầu, thiết bị/trình duyệt sẽ nhớ kho. Không ghép mã cho từng bản vẽ.
 4. Trong Kho, chọn **Project → Bản vẽ → Mở**. Thanh trên hiện **Tên Project / Tên bản vẽ**. Sửa như bình thường; local tự lưu, cloud chỉ gửi/nhận khi bấm **Đồng bộ** hoặc Desktop thoát có kiểm soát.
 5. Tạo Project/bản vẽ mới ở bên nào cũng được: bấm **Đồng bộ** bên nguồn để gửi, rồi bên nhận để cập nhật. Không còn poll tự động.
 
@@ -40,7 +48,7 @@ Tên Project không phải mã kho. Trong Kho có **Mã kho đang mở**: Web/De
 
 - Khi mở một kho trên máy khác, các bản local đã có trên máy đó **giữ riêng**, không bị đè hay tự gộp vào kho. Mở chúng từ **File / Bản vẽ chỉ trên máy / Checkpoint**; muốn đưa vào kho thì mở bản đó, chọn dự án và bấm **Đưa bản đang mở vào dự án này**.
 - Bản mới/import/copy sau khi đã mở kho tự vào dự án đang chọn. Nhánh xung đột giữ local riêng, không tự đẩy lại cloud.
-- Offline vẫn tạo/sửa và lưu local. Có mạng thì tiếp tục gửi hàng đợi; không xóa site/app data khi còn dữ liệu chưa dự phòng.
+- Offline vẫn tạo/sửa và lưu local. Có mạng thì bấm Đồng bộ để tiếp tục gửi hàng đợi; không xóa site/app data khi còn dữ liệu chưa dự phòng.
 - Link kho là quyền chung, không phải tài khoản hoặc quyền từng thiết bị. Mất link và mất mọi thiết bị còn nhớ kho thì không có email để khôi phục. Không để link trong file `.diagramai`.
 - Liên kết P5 cũ chỉ có quyền editor cần được đưa vào kho từ thiết bị owner; không tự thay quyền, bỏ pending edits hay nhân bản để lách quyền.
 

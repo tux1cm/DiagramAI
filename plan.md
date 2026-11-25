@@ -867,6 +867,8 @@ Việc làm:
 
 **Điều chỉnh đồng bộ (2026-11-25):** cả Web/Desktop đều tạo Project và bản vẽ, đồng bộ hai chiều. Bỏ tự gửi/nhận cloud theo timer/focus/online và khi tạo Project/bản vẽ; nút Đồng bộ cập nhật toàn kho (catalog và nội dung). Local vẫn tự lưu. Desktop lưu local rồi thử đồng bộ hết trước khi thoát, lỗi thì hỏi và giữ hàng đợi. Web cảnh báo thay đổi chưa gửi khi đóng tab, không hứa hoàn tất network trong unload. Mở link mới/tạo kho/chia sẻ vẫn là thao tác cloud chủ động.
 
+**Chốt link kho chính (2026-11-25):** chủ chọn **một link kho chính** dùng trên Web/Desktop, app nhớ sau lần mở đầu; không thêm tài khoản/mã quản trị và không tạo kho riêng theo từng thiết bị. Gỡ nút tạo kho khỏi luồng người dùng. Link kho chính là toàn quyền dành riêng cho chủ; người nhận chỉ được gửi link Project/bản vẽ giới hạn scope, không được suy ra quyền kho chính khi mở root. Mở main link khác cần xác nhận và giữ archive/dữ liệu cũ, không tự gộp/xóa. Chi tiết ADR 0010.
+
 1. Viết migrations Postgres + integration tests; tách branch dev/prod.
 2. Functions CRUD project private, CAS revision, idempotency/outbox.
 3. Tạo recovery secret + device token, hash token, ghép nối one-time code, revoke; rate limit anti brute-force.

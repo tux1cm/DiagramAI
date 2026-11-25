@@ -14,6 +14,7 @@ test('private workspace catalog and drawings via Web CSP/CORS → managed Neon F
   });
   try {
     const created = await createWorkspace(page);
+    access = created.access;
     await target.goto('./'); await ready(target); await connectWorkspace(target, created.link); await openWorkspaceDrawing(target, created.title);
     await editCloudNode(page, 'Tiếp nhận vật tư', 'Managed đi'); await syncNow(page);
     await syncNow(target); await closeCloud(target); await expect(nodeModel(target, 'Managed đi')).toBeVisible();

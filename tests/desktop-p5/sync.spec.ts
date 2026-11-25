@@ -39,6 +39,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
   const webContext = await browser.newContext({ baseURL }), web = await webContext.newPage();
   try {
     let desk = await launch(); const source = await createWorkspace(desk, false);
+    workspaceAccess = source.access;
     await web.goto('./'); await ready(web); await connectWorkspace(web, source.link);
     await openWorkspaceDrawing(web, source.title);
     await editCloudNode(desk, 'Tiếp nhận vật tư', 'Desktop qua Web'); await syncNow(desk);

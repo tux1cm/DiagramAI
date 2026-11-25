@@ -56,7 +56,7 @@ export class WorkspaceLibrary {
         if ((await this.access()).key !== access.key) throw new Error('Quyền kho không khớp. Không thay khóa đã lưu.');
         await this.synchronize(true); return;
       }
-      if (!switchConfirmed) throw new Error('Máy này đang nhớ kho khác. Dùng mục Kết nối thiết bị của tôi để xác nhận đổi kho và giữ kho cũ.');
+      if (!switchConfirmed) throw new Error('Máy này đang nhớ kho khác. Dùng mục Link kho chính của tôi để xác nhận dùng link kho chính và giữ kho cũ.');
       if (this.running) throw new Error('Hãy chờ lần đồng bộ hiện tại kết thúc trước khi đổi kho.');
     }
     const catalog = await this.api().workspaceCatalog(access), folderId = catalog.folders[0]?.id ?? newId();

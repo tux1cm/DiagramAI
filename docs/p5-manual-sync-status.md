@@ -16,3 +16,9 @@ Ngày 2026-11-25. Trạng thái: **đã triển khai đồng bộ thủ công ha
 - **Live public 1/1 PASS**, 23,7 giây testcase / 25,6 giây harness trên Pages mới: Web sửa hai chiều qua API production, nhận bản mới, scope Project không lộ Project khác. Chỉ fixture của test được xóa. Evidence: [`evidence/p5-manual-sync/`](evidence/p5-manual-sync/).
 
 Thiết kế: [ADR 0009](decisions/0009-p5-manual-two-way-sync.md). Hướng dẫn: [p5-usage.md](p5-usage.md).
+
+## Chốt giao diện một link kho chính
+
+Chủ chọn link kho chính, không tài khoản/mã quản trị. Gỡ nút tạo kho riêng theo thiết bị; chưa có quyền thì chỉ mở link kho chính hoặc dùng local. Link kho chính dành riêng cho chủ và được nhớ sau lần mở đầu. Người nhận chỉ được gửi link Project/bản vẽ, không tự cấp quyền toàn kho khi mở trang chính.
+
+Mở main link khác khi máy đã nhớ kho cũ: key được xóa khỏi URL ngay, giữ pending trong memory, hỏi xác nhận và giữ archive trước khi đổi, không buộc dán lại. Không lấy key từ DB hoặc nhúng capability vào bundle. ADR [0010](decisions/0010-p5-one-main-workspace-link.md). Source lint/typecheck và 35 unit/boundary PASS; đang chốt Web/native/public smoke cho giao diện mới.

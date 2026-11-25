@@ -1,6 +1,6 @@
 # DiagramAI
 
-P5 dùng **Kho dạng thẻ Project → Bản vẽ trong vùng giữa**. Cả Web/Desktop tạo và đồng bộ hai chiều qua **nút Đồng bộ**; local vẫn tự lưu, Desktop thử đồng bộ hết trước khi thoát. Chia sẻ ngay trên thẻ: link Project xem/sửa các bản trong Project; link bản vẽ chỉ xem/sửa một bản, không login. Link kho riêng dành cho thiết bị của chủ. **Chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ mới: [`docs/p5-manual-sync-status.md`](docs/p5-manual-sync-status.md); lịch sử: [`docs/p5-scoped-sharing-status.md`](docs/p5-scoped-sharing-status.md), [`docs/p5-workspace-status.md`](docs/p5-workspace-status.md), [`docs/p5-status.md`](docs/p5-status.md). Hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md).
+P5 dùng **một link kho chính cho Web/Desktop**, app nhớ sau lần mở đầu, không tạo kho riêng theo thiết bị và không cần tài khoản/mã quản trị. Kho dạng thẻ **Project → Bản vẽ** trong vùng giữa. Cả hai nền tảng tạo và đồng bộ hai chiều qua **nút Đồng bộ**; local vẫn tự lưu, Desktop thử đồng bộ hết trước khi thoát. Người nhận chỉ mở **link Project/bản vẽ** từ thẻ, có quyền trong đúng phạm vi đó, không login. **Không gửi link kho chính cho người nhận**. Chưa phải v1.0; chưa làm P6/AI. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ: [`docs/p5-manual-sync-status.md`](docs/p5-manual-sync-status.md). Hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md).
 
 ## Chạy Web trên Windows
 

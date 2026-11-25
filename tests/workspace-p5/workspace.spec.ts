@@ -26,7 +26,7 @@ test('one private workspace discovers projects and drawings both ways, preserves
     await renameDrawing(target, 'P5 fixture sửa từ Web'); await updateLibrary(target); await closeLibrary(target);
     await updateLibrary(page); await closeLibrary(page); await expect(page.locator('.project-name')).toContainText('P5 fixture sửa từ Web');
     await target.reload(); await ready(target); await openLibrary(target);
-    await expect(target.getByText('Kết nối thiết bị của tôi', { exact: true })).toBeVisible();
+    await expect(target.getByText('Link kho chính của tôi', { exact: true })).toBeVisible();
     await target.getByRole('button', { name: 'File / Bản vẽ chỉ trên máy / Checkpoint', exact: true }).click();
     await expect(target.locator('.project-list')).toContainText('Bản local trước khi mở kho');
     expect(urls.some((url) => url.includes('dai_workspace_v1_'))).toBe(false);
