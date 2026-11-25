@@ -3,7 +3,7 @@ import { MAX_SYNC_BYTES } from '@diagramai/sync-core';
 import { SyncFault, type SyncService } from './sync-service';
 
 type Service = Pick<SyncService, 'rate' | 'create' | 'pull' | 'push' | 'pair' | 'redeem' | 'devices' | 'revoke' | 'recover' | 'revisions' | 'deleteProject'>;
-type WorkspaceService = Pick<SyncService, 'workspaceCreate' | 'workspaceCatalog' | 'workspaceFolder' | 'workspaceDrawingCreate' | 'workspaceDrawingAccess' | 'workspaceAdopt' | 'workspaceDelete'>;
+type WorkspaceService = Pick<SyncService, 'workspaceCreate' | 'workspaceCatalog' | 'workspaceFolder' | 'workspaceDrawingCreate' | 'workspaceDrawingAccess' | 'workspaceAdopt' | 'workspaceDelete' | 'createShare' | 'shareCatalog' | 'shareDrawingAccess'>;
 export interface SyncHandlerOptions {
   service?: Service & Partial<WorkspaceService>;
   allowedOrigins: readonly string[];
@@ -50,10 +50,27 @@ export function createSyncHandler(options: SyncHandlerOptions) {
     const service = options.service, enabled = options.enabled && Boolean(service);
     if (path === '/v1/sync/status' && method === 'GET') return reply({ enabled, protocolVersion: 1 });
     if (!enabled || !service) return reply({ error: 'SYNC_DISABLED' }, 503);
+    if (path.startsWith('/v1/shares/')) {
+      try {
+        if (url.search) throw new SyncFault(400, 'QUERY_NOT_ALLOWED');
+        const match = path.match(/^\/v1\/shares\/([^/]+)(?:\/drawings\/([^/]+)\/access)?$/);
+        if (!match) throw new SyncFault(404, 'NOT_FOUND');
+        const key = request.headers.get('Authorization')?.match(/^Bearer (dai_share_v1_[A-Za-z0-9_-]{43})$/)?.[1];
+        if (!key) throw new SyncFault(401, 'ACCESS_DENIED');
+        await service.rate('share-access', options.clientAddress?.(request) ?? null, key);
+        const id = z.uuid().parse(match[1]);
+        if (method === 'GET' && !match[2] && service.shareCatalog) return reply(await service.shareCatalog(id, key));
+        if (method === 'POST' && match[2] && service.shareDrawingAccess) return reply(await service.shareDrawingAccess(id, key, z.uuid().parse(match[2])));
+        throw new SyncFault(404, 'NOT_FOUND');
+      } catch (error) {
+        if (error instanceof SyncFault) { if (error.status === 429) headers.set('Retry-After', '60'); return reply({ error: error.code }, error.status); }
+        return reply({ error: error instanceof z.ZodError ? 'INVALID_REQUEST' : 'SYNC_UNAVAILABLE' }, error instanceof z.ZodError ? 400 : 503);
+      }
+    }
     if (path === '/v1/workspaces' || path.startsWith('/v1/workspaces/')) {
       try {
         if (url.search) throw new SyncFault(400, 'QUERY_NOT_ALLOWED');
-        const workspace = path.match(/^\/v1\/workspaces\/([^/]+)(?:\/(folders|drawings|adopt)(?:\/([^/]+)\/access)?)?$/);
+        const workspace = path.match(/^\/v1\/workspaces\/([^/]+)(?:\/(folders|drawings|adopt|shares)(?:\/([^/]+)\/access)?)?$/);
         const key = request.headers.get('Authorization')?.match(/^Bearer (dai_workspace_v1_[A-Za-z0-9_-]{43})$/)?.[1];
         const creating = path === '/v1/workspaces' && method === 'POST';
         await service.rate(creating ? 'workspace-create' : method === 'GET' ? 'workspace-list' : 'workspace-write', options.clientAddress?.(request) ?? null, key);
@@ -61,6 +78,7 @@ export function createSyncHandler(options: SyncHandlerOptions) {
         if (!workspace) throw new SyncFault(404, 'NOT_FOUND');
         if (!key) throw new SyncFault(401, 'ACCESS_DENIED');
         const id = z.uuid().parse(workspace[1]);
+        if (method === 'POST' && workspace[2] === 'shares' && !workspace[3] && service.createShare) return reply(await service.createShare(id, key, await jsonBody(request)), 201);
         if (!workspace[2] && method === 'DELETE' && service.workspaceDelete) { await service.workspaceDelete(id, key); return new Response(null, { status: 204, headers }); }
         if (!workspace[2] && method === 'GET' && service.workspaceCatalog) return reply(await service.workspaceCatalog(id, key));
         if (method === 'POST' && workspace[2] === 'folders' && !workspace[3] && service.workspaceFolder) return reply(await service.workspaceFolder(id, key, await jsonBody(request)));

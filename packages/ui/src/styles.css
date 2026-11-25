@@ -11,6 +11,22 @@
 .workspace-browser nav button { white-space: normal; overflow-wrap: anywhere; text-align: left; }
 .workspace-browser section { min-width: 0; }
 .workspace-project-title { color: #66758e; }
+.workspace-surface { flex: 1; min-height: 0; overflow: auto; padding: 24px; line-height: 1.6; background-color: #fbfcff; background-image: radial-gradient(#d6dff5 1px, transparent 1px); background-size: 20px 20px; }
+.workspace-heading { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+.workspace-breadcrumb { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.workspace-breadcrumb h2 { font-size: 18px; margin: 0; overflow-wrap: anywhere; }
+.workspace-create { max-width: 440px; }
+.workspace-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 260px)); gap: 20px; margin: 20px 0; align-items: start; }
+.workspace-card { min-width: 0; background: #fff; border: 1px solid #d8e1f1; border-radius: 12px; box-shadow: 0 3px 10px #34496f09; padding: 12px; }
+.workspace-card-open { display: flex; flex-direction: column; gap: 10px; width: 100%; min-height: 120px; text-align: left; padding: 12px; border: 0; background: transparent; color: #233455; cursor: pointer; }
+.workspace-card-open strong { overflow-wrap: anywhere; font-size: 14px; }
+.workspace-card-open small { color: #71829b; }
+.workspace-card .btn { margin: 8px 12px 4px; }
+.workspace-card:hover { border-color: #8398f5; }
+.workspace-utilities { display: flex; flex-wrap: wrap; gap: 16px; align-items: start; margin-top: 32px; color: #71829b; font-size: 12px; }
+.workspace-utilities details { max-width: 460px; }
+.share-result { max-width: 760px; }
+.editor-app .project-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cloud-panel textarea { display: block; width: 100%; padding: 8px; border: 1px solid #dce3ef; border-radius: 7px; resize: vertical; }
 .cloud-panel section { margin: 16px 0; }
 .cloud-panel code { overflow-wrap: anywhere; }

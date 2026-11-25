@@ -1,10 +1,10 @@
 import { newId } from '@diagramai/diagram-core';
 import { decodeRecord, LocalSyncJournal, WorkspaceJournal, type ProjectSession, type WorkspaceState } from '@diagramai/local-storage';
-import { snapshotHash, SyncApiError, SyncClient, workspaceLink, workspaceLocalId, type WorkspaceAccess } from '@diagramai/sync-core';
+import { snapshotHash, SyncApiError, SyncClient, workspaceLink, workspaceLocalId, shareLink, type WorkspaceAccess } from '@diagramai/sync-core';
 
-export interface LibrarySnapshot { loading: boolean; busy: boolean; state: WorkspaceState | null; error: string }
+export interface LibrarySnapshot { loading: boolean; busy: boolean; state: WorkspaceState | null; error: string; view: 'projects' | 'drawings' | 'editor' }
 export class WorkspaceLibrary {
-  private snapshot: LibrarySnapshot = { loading: true, busy: false, state: null, error: '' };
+  private snapshot: LibrarySnapshot = { loading: true, busy: false, state: null, error: '', view: 'editor' };
   private listeners = new Set<() => void>();
   private journal: WorkspaceJournal;
   private syncJournal: LocalSyncJournal;
@@ -61,10 +61,31 @@ export class WorkspaceLibrary {
     await this.reload(); await this.synchronize(true);
   }
   async shareLink(base: string) { return workspaceLink(base, await this.access()); }
-  async selectFolder(id: string) { await this.update((state) => { if (!state.folders.some((folder) => folder.id === id)) throw new Error('Dự án không còn trong kho.'); return { ...state, selectedFolderId: id }; }); }
+  showProjects = () => this.publish({ view: 'projects' });
+  showEditor = () => this.publish({ view: 'editor' });
+  async createScopedLink(base: string, kind: 'project' | 'drawing', targetId: string) {
+    await this.synchronize(true);
+    let state = (await this.session.repository.workspaceRead())!;
+    if (!state) throw new Error('Chưa mở kho.');
+    let entry = state.shares?.find((item) => item.kind === kind && item.targetId === targetId);
+    if (!entry) {
+      const id = newId(), bytes = crypto.getRandomValues(new Uint8Array(32));
+      const key = `dai_share_v1_${btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')}`;
+      await this.session.repository.shareCredentialWrite({ id, key });
+      await this.update((current) => current.shares?.some((item) => item.kind === kind && item.targetId === targetId) ? current : { ...current, shares: [...current.shares ?? [], { id, kind, targetId }] });
+      state = (await this.session.repository.workspaceRead())!;
+      entry = state.shares!.find((item) => item.kind === kind && item.targetId === targetId)!;
+    }
+    const key = await this.session.repository.syncCredential(entry.id);
+    if (!key) throw new Error('Không đọc được link chia sẻ đã lưu.');
+    await this.api().createShare(await this.access(), { ...entry, key });
+    return shareLink(base, { id: entry.id, key });
+  }
+  async selectFolder(id: string) { await this.update((state) => { if (!state.folders.some((folder) => folder.id === id)) throw new Error('Dự án không còn trong kho.'); return { ...state, selectedFolderId: id }; }); this.publish({ view: 'drawings' }); }
   async createFolder(title: string) {
     title = title.trim(); if (!title || title.length > 100) throw new Error('Tên dự án cần từ 1 đến 100 ký tự.');
     const id = newId(); await this.update((state) => ({ ...state, selectedFolderId: id, folders: [...state.folders, { id, title, pending: true }] }));
+    this.publish({ view: 'drawings' });
     await this.synchronize(true);
   }
   async enroll(localId: string, folderId?: string) {
@@ -78,15 +99,17 @@ export class WorkspaceLibrary {
     const folderId = this.snapshot.state?.selectedFolderId;
     await this.session.createProject(title.trim());
     await this.enroll(this.session.getSnapshot().store.getSnapshot().document.documentId, folderId);
+    this.showEditor();
     await this.synchronize(true);
   }
-  async open(localId: string) { await this.session.openProject(localId); }
+  async open(localId: string) { await this.session.openProject(localId); this.showEditor(); }
   synchronize(force = false): Promise<void> {
-    if (this.running) return force ? this.running.then(() => this.synchronize(true)) : this.running;
+    if (this.running) return force ? this.running.then(() => this.synchronize(true), () => this.synchronize(true)) : this.running;
     this.running = this.sync(force).finally(() => { this.running = null; this.publish({ busy: false }); });
     return this.running;
   }
   private async sync(force: boolean) {
+    if (await this.session.repository.shareContextRead()) return;
     let state = await this.reload(); if (!state) return;
     this.publish({ busy: true });
     const access = await this.access(), api = this.api();
@@ -97,6 +120,7 @@ export class WorkspaceLibrary {
       await this.update((current) => ({ ...current, folders: current.folders.map((item) => item.id === folder.id ? { ...item, pending: false } : item) }));
     }
     state = (await this.reload())!;
+    if (await this.session.repository.shareContextRead()) return;
     for (const record of await this.session.repository.list()) {
       // Existing local files on a newly joined device and preserved conflict
       // branches stay local. New drawings/imports/copies join the selected project.

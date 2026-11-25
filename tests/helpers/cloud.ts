@@ -4,7 +4,10 @@ import { nodeModel, ready } from './drawing';
 
 export const cloudButton = (page: Page) => page.getByTitle('Trạng thái đồng bộ', { exact: true });
 export async function openCloud(page: Page) { if (!await page.getByRole('dialog').count()) await cloudButton(page).click(); }
-export async function closeCloud(page: Page) { if (await page.getByRole('dialog').count()) await page.getByRole('button', { name: 'Đóng', exact: true }).click(); }
+export async function closeCloud(page: Page) {
+  if (await page.getByRole('dialog').count()) await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+  if (await page.locator('.workspace-surface').count()) await page.getByRole('button', { name: 'Trở lại bản vẽ', exact: true }).click();
+}
 export async function editCloudNode(page: Page, before: string, after: string) {
   await closeCloud(page); await nodeModel(page, before).dblclick();
   const input = page.getByRole('textbox', { name: 'Sửa chữ trong hình', exact: true }); await input.fill(after); await input.press('Enter');

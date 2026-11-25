@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { DiagramDocument } from '@diagramai/diagram-core';
 import { CreatedProjectSchema, DeviceLabelSchema, JoinedProjectSchema, PushReceiptSchema, SnapshotSchema, snapshotHash, type PushSnapshot } from './protocol';
-import { WorkspaceAccessSchema, WorkspaceCatalogSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, type WorkspaceAccess } from './workspace';
+import { WorkspaceAccessSchema, WorkspaceCatalogSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, CreateShareSchema, ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type WorkspaceAccess } from './workspace';
 
 export class SyncApiError extends Error {
   constructor(readonly status: number, readonly code: string, readonly retryAfterMs = 0) { super(code); }
@@ -103,5 +103,19 @@ export class SyncClient {
   async workspaceAdopt(access: WorkspaceAccess, input: z.infer<typeof WorkspaceAdoptSchema>) {
     const result = JoinedProjectSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/adopt`, 'POST', access.key, WorkspaceAdoptSchema.parse(input)));
     await this.verify(result.snapshot, input.projectId); if (result.credentials.projectId !== input.projectId) throw new SyncApiError(502, 'PROJECT_MISMATCH'); return result;
+  }
+  async createShare(access: WorkspaceAccess, input: z.infer<typeof CreateShareSchema>) {
+    const checked = CreateShareSchema.parse(input);
+    const result = z.object({ id: z.uuid() }).strict().parse(await this.request(`v1/workspaces/${projectKey(access.id)}/shares`, 'POST', access.key, checked));
+    if (result.id !== checked.id) throw new SyncApiError(502, 'SHARE_MISMATCH');
+  }
+  async shareCatalog(access: ShareAccess) {
+    const checked = ShareAccessSchema.parse({ id: access.id, key: access.key }), result = ShareCatalogSchema.parse(await this.request(`v1/shares/${checked.id}`, 'GET', checked.key));
+    if (result.id !== checked.id) throw new SyncApiError(502, 'SHARE_MISMATCH'); return result;
+  }
+  async shareDrawing(access: ShareAccess, id: string) {
+    const checked = ShareAccessSchema.parse({ id: access.id, key: access.key }), target = projectKey(id);
+    const result = JoinedProjectSchema.parse(await this.request(`v1/shares/${checked.id}/drawings/${target}/access`, 'POST', checked.key));
+    await this.verify(result.snapshot, target); if (result.credentials.projectId !== target) throw new SyncApiError(502, 'PROJECT_MISMATCH'); return result;
   }
 }

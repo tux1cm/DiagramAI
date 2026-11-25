@@ -20,3 +20,8 @@ async fn blocking<T: Send + 'static>(work: impl FnOnce() -> storage::Result<T> +
 #[tauri::command] pub async fn sync_credential(state: Shared<'_>, device_id:String)->storage::Result<Option<String>> {let p=path(&state)?;blocking(move||crate::sync::credential(&p,&device_id)).await}
 #[tauri::command] pub async fn workspace_read(state: Shared<'_>)->storage::Result<Option<serde_json::Value>> {let p=path(&state)?;blocking(move||crate::workspace::read(&p)).await}
 #[tauri::command] pub async fn workspace_write(state: Shared<'_>,input:crate::workspace::Commit)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write(&p,input)).await}
+#[tauri::command] pub async fn share_credential_write(state: Shared<'_>,access:crate::workspace::ShareAccess)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::save_share(&p,access)).await}
+#[tauri::command] pub async fn share_catalog_read(state: Shared<'_>,id:String)->storage::Result<Option<serde_json::Value>> {let p=path(&state)?;blocking(move||crate::workspace::read_share_catalog(&p,&id)).await}
+#[tauri::command] pub async fn share_catalog_write(state: Shared<'_>,catalog:serde_json::Value)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write_share_catalog(&p,catalog)).await}
+#[tauri::command] pub async fn share_context_read(state: Shared<'_>)->storage::Result<Option<String>> {let p=path(&state)?;blocking(move||crate::workspace::read_share_context(&p)).await}
+#[tauri::command] pub async fn share_context_write(state: Shared<'_>,id:Option<String>)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write_share_context(&p,id)).await}

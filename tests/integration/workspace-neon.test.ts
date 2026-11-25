@@ -84,4 +84,51 @@ suite('P5 shared workspace → existing snapshot CAS boundary on real Postgres',
     expect(await rejection(service.workspaceCatalog(a.id, a.key))).toMatchObject({ status: 401 });
     expect((await pool.query('SELECT used_bytes,project_count FROM diagramai_sync.storage_budget WHERE singleton')).rows[0]).toEqual(before);
   });
+  it('a Project share edits all and only its drawings, including drawings added later; no workspace/admin capability leaks', async () => {
+    const a = await workspace(), otherFolder = { id: randomUUID(), title: 'Other private Project' }; await service.workspaceFolder(a.id, a.key, otherFolder);
+    const first = await service.workspaceDrawingCreate(a.id, a.key, await drawing(a.folder.id));
+    const outside = await service.workspaceDrawingCreate(a.id, a.key, await drawing(otherFolder.id));
+    const access = { id: randomUUID(), key: `dai_share_v1_${randomBytes(32).toString('base64url')}`, kind: 'project' as const, targetId: a.folder.id };
+    await service.createShare(a.id, a.key, access); await service.createShare(a.id, a.key, access);
+    const later = await service.workspaceDrawingCreate(a.id, a.key, await drawing(a.folder.id));
+    const catalog = await service.shareCatalog(access.id, access.key);
+    expect(catalog.drawings.map((item) => item.id).sort()).toEqual([first.credentials.projectId, later.credentials.projectId].sort());
+    expect(JSON.stringify(catalog).includes(a.key)).toBe(false); expect(JSON.stringify(catalog).includes(a.id)).toBe(false);
+    expect(await rejection(service.shareDrawingAccess(access.id, access.key, outside.credentials.projectId))).toMatchObject({ status: 404 });
+    expect(await rejection(service.workspaceCatalog(a.id, access.key))).toMatchObject({ status: 401 });
+    const opened = await service.shareDrawingAccess(access.id, access.key, first.credentials.projectId);
+    expect(opened.credentials.scope).toBe('editor');
+    const edited = { ...opened.snapshot.document, title: 'Edited through Project link' };
+    await service.push(first.credentials.projectId, opened.credentials.token, { document: edited, hash: await snapshotHash(edited), baseRevision: 1, operationId: randomUUID() });
+    expect((await service.pull(first.credentials.projectId, first.credentials.token)).document.title).toBe(edited.title);
+    expect(await rejection(service.deleteProject(first.credentials.projectId, opened.credentials.token))).toMatchObject({ status: 403 });
+    expect(await rejection(service.createShare(a.id, access.key, { ...access, id: randomUUID() }))).toMatchObject({ status: 401 });
+  });
+  it('a drawing share cannot enumerate/open/edit siblings even by forging IDs; access retries reuse one editor principal', async () => {
+    const a = await workspace(), one = await service.workspaceDrawingCreate(a.id, a.key, await drawing(a.folder.id)), two = await service.workspaceDrawingCreate(a.id, a.key, await drawing(a.folder.id));
+    const access = { id: randomUUID(), key: `dai_share_v1_${randomBytes(32).toString('base64url')}`, kind: 'drawing' as const, targetId: one.credentials.projectId };
+    await service.createShare(a.id, a.key, access);
+    expect((await service.shareCatalog(access.id, access.key)).drawings.map((item) => item.id)).toEqual([one.credentials.projectId]);
+    const opened = await service.shareDrawingAccess(access.id, access.key, one.credentials.projectId), again = await service.shareDrawingAccess(access.id, access.key, one.credentials.projectId);
+    expect(opened.credentials.deviceId === again.credentials.deviceId).toBe(true);
+    expect(await rejection(service.shareDrawingAccess(access.id, access.key, two.credentials.projectId))).toMatchObject({ status: 404 });
+    expect(await rejection(service.pull(two.credentials.projectId, opened.credentials.token))).toMatchObject({ status: 401 });
+    expect(await rejection(service.shareCatalog(access.id, `dai_share_v1_${'x'.repeat(43)}`))).toMatchObject({ status: 401 });
+    expect(await rejection(service.createShare(a.id, a.key, { ...access, targetId: two.credentials.projectId }))).toMatchObject({ status: 409 });
+  });
+  it('share creation cannot bind a folder or drawing from a different workspace', async () => {
+    const a = await workspace(), b = await workspace(), one = await service.workspaceDrawingCreate(a.id, a.key, await drawing(a.folder.id));
+    for (const input of [{ kind: 'project', targetId: a.folder.id }, { kind: 'drawing', targetId: one.credentials.projectId }]) expect(await rejection(service.createShare(b.id, b.key, { ...input, id: randomUUID(), key: `dai_share_v1_${randomBytes(32).toString('base64url')}` }))).toMatchObject({ status: 404 });
+  });
+  it('creation charges one daily request per retry, keeps its minute/day caps and does not reset a spent counter', async () => {
+    const namespace = `rate-fixture-${randomUUID()}:`, limited = new SyncService(pool, 'rate-fixture-secret-not-deployed-123456', { rateNamespace: namespace });
+    try {
+      await limited.rate('workspace-create', null); await limited.rate('workspace-create', null);
+      const id = `${namespace}global:workspace-create:day`;
+      expect(Number((await pool.query('SELECT counter FROM diagramai_sync.rate_limit_buckets WHERE bucket_id=$1', [id])).rows[0].counter)).toBe(2);
+      await pool.query('UPDATE diagramai_sync.rate_limit_buckets SET counter=20 WHERE bucket_id=$1', [id]);
+      expect(await rejection(limited.rate('workspace-create', null))).toMatchObject({ status: 429, code: 'DAILY_LIMIT' });
+      expect(Number((await pool.query('SELECT counter FROM diagramai_sync.rate_limit_buckets WHERE bucket_id=$1', [id])).rows[0].counter)).toBe(20);
+    } finally { await pool.query('DELETE FROM diagramai_sync.rate_limit_buckets WHERE starts_with(bucket_id,$1)', [namespace]); }
+  });
 });

@@ -13,7 +13,7 @@ const raw = command.status === 0 && command.stdout.match(/postgres(?:ql)?:\/\/[^
 if (!raw) throw new Error('Could not receive database credentials; output suppressed.');
 const uri = new URL(raw); uri.searchParams.set('sslmode', 'verify-full');
 const pool = new Pool({ connectionString: uri.toString(), max: 1, connectionTimeoutMillis: 15000, statement_timeout: 30000 });
-const tables = ['schema_migrations', 'workspaces', 'workspace_folders', 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget', 'workspace_drawings'];
+const tables = ['schema_migrations', 'workspaces', 'workspace_folders', 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget', 'workspace_drawings', 'share_links'];
 const backup = { format: 'diagramai-sync-admin-backup-v1', project, branch, createdAt: new Date().toISOString(), migrations: {}, tables: {} };
 try {
   const db = await pool.connect();
@@ -21,7 +21,7 @@ try {
     await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
     for (const name of tables) {
       const exists = (await db.query('SELECT to_regclass($1) AS relation', [`diagramai_sync.${name}`])).rows[0].relation;
-      if (!exists && ['workspaces', 'workspace_folders', 'workspace_drawings'].includes(name)) continue;
+      if (!exists && ['workspaces', 'workspace_folders', 'workspace_drawings', 'share_links'].includes(name)) continue;
       backup.tables[name] = (await db.query(`SELECT coalesce(json_agg(t),'[]'::json) AS rows FROM diagramai_sync.${name} t`)).rows[0].rows;
     }
     await db.query('COMMIT');

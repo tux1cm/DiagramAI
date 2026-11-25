@@ -2,6 +2,7 @@ import { LocalConflict, prepareRecord, type LocalRepository, type ProjectSummary
 import { saveWithSync } from './sync-journal';
 import type { LocalSyncLink, SyncBackend, SyncCommit, SyncRead } from './sync-types';
 import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit, type WorkspaceState } from './workspace';
+import { ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 
 export class IndexedDbRepository implements LocalRepository, SyncBackend {
   readonly kind = 'indexeddb' as const;
@@ -60,6 +61,27 @@ export class IndexedDbRepository implements LocalRepository, SyncBackend {
     });
   }
   async syncCredential(deviceId: string) { return (await this.read<{ token?: string } | undefined>('device_credentials', (store) => store.get(deviceId)))?.token ?? null; }
+  async shareCredentialWrite(access: ShareAccess) {
+    const checked = ShareAccessSchema.parse(access), db = await this.open();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('device_credentials', 'readwrite', { durability: 'strict' }), store = tx.objectStore('device_credentials'), old = store.get(checked.id);
+      tx.oncomplete = () => resolve(); tx.onabort = () => reject(new Error('Chưa lưu được quyền chia sẻ; không thay quyền đã có.'));
+      old.onsuccess = () => { if (old.result && old.result.token !== checked.key) { tx.abort(); return; } store.put({ deviceId: checked.id, token: checked.key }); };
+    });
+  }
+  async shareCatalogRead(id: string) { const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get(`share-catalog:${id}`)); return record ? ShareCatalogSchema.parse(record.value) : null; }
+  async shareContextRead() { return (await this.read<{ value: string } | undefined>('settings', (store) => store.get('active-share')))?.value ?? null; }
+  async shareContextWrite(id: string | null) {
+    if (id !== null) ShareAccessSchema.shape.id.parse(id); const db = await this.open();
+    return new Promise<void>((resolve, reject) => { const tx = db.transaction('settings', 'readwrite', { durability: 'strict' }); if (id) tx.objectStore('settings').put({ key: 'active-share', value: id }); else tx.objectStore('settings').delete('active-share'); tx.oncomplete = () => resolve(); tx.onabort = () => reject(new Error('Chưa lưu được lựa chọn chia sẻ.')); });
+  }
+  async shareCatalogWrite(catalog: ShareCatalog) {
+    const checked = ShareCatalogSchema.parse(catalog), db = await this.open();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('settings', 'readwrite', { durability: 'strict' }); tx.objectStore('settings').put({ key: `share-catalog:${checked.id}`, value: checked });
+      tx.oncomplete = () => resolve(); tx.onabort = () => reject(new Error('Chưa lưu được danh sách chia sẻ offline.'));
+    });
+  }
   async workspaceRead(): Promise<WorkspaceState | null> {
     const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get('workspace-v1'));
     return record ? WorkspaceStateSchema.parse(record.value) : null;

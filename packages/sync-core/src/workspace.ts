@@ -8,6 +8,12 @@ export const WorkspaceFolderSchema = z.object({ id: z.uuid(), title: z.string().
 export const WorkspaceDrawingSchema = z.object({ id: z.uuid(), folderId: z.uuid(), title: z.string().min(1).max(100), revision: z.number().int().positive() }).strict();
 export const WorkspaceCatalogSchema = z.object({ id: z.uuid(), folders: z.array(WorkspaceFolderSchema).max(100), drawings: z.array(WorkspaceDrawingSchema).max(100) }).strict();
 export type WorkspaceCatalog = z.infer<typeof WorkspaceCatalogSchema>;
+export const ShareKeySchema = z.string().regex(/^dai_share_v1_[A-Za-z0-9_-]{43}$/);
+export const ShareAccessSchema = z.object({ id: z.uuid(), key: ShareKeySchema }).strict();
+export type ShareAccess = z.infer<typeof ShareAccessSchema>;
+export const CreateShareSchema = ShareAccessSchema.extend({ kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict();
+export const ShareCatalogSchema = WorkspaceCatalogSchema.extend({ kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict();
+export type ShareCatalog = z.infer<typeof ShareCatalogSchema>;
 export const WorkspaceCreateDrawingSchema = z.object({ id: z.uuid(), folderId: z.uuid(), project: CreateProjectSchema }).strict();
 export const WorkspaceAdoptSchema = z.object({ folderId: z.uuid(), projectId: z.uuid(), token: z.string().regex(/^dai_device_v1_[A-Za-z0-9_-]{43}$/), deviceLabel: DeviceLabelSchema }).strict();
 
@@ -22,6 +28,17 @@ export function parseWorkspaceLink(text: string): WorkspaceAccess {
 export function workspaceLink(base: string, access: WorkspaceAccess) {
   const checked = WorkspaceAccessSchema.parse(access), url = new URL(base);
   url.search = ''; url.hash = `/workspace/${checked.id}/${checked.key}`; return url.href;
+}
+export function parseShareLink(text: string): ShareAccess {
+  const url = new URL(text.trim());
+  if (url.username || url.password || url.search || !(url.protocol === 'https:' || url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) throw new Error('Link chia sẻ không hợp lệ.');
+  const match = url.hash.match(/^#\/share\/([a-f0-9-]{36})\/(dai_share_v1_[A-Za-z0-9_-]{43})$/i);
+  if (!match) throw new Error('Cần dán đầy đủ link chia sẻ Project hoặc bản vẽ.');
+  return ShareAccessSchema.parse({ id: match[1].toLowerCase(), key: match[2] });
+}
+export function shareLink(base: string, access: ShareAccess) {
+  const checked = ShareAccessSchema.parse(access), url = new URL(base);
+  url.search = ''; url.hash = `/share/${checked.id}/${checked.key}`; return url.href;
 }
 export async function workspaceLocalId(workspaceId: string, cloudId: string) {
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`diagramai-workspace-local-v1\0${workspaceId}\0${cloudId}`))).slice(0, 16);

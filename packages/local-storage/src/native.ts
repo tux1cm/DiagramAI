@@ -3,6 +3,7 @@ import { LocalConflict, type LocalRepository, type ProjectSummary, type SaveRequ
 import { saveWithSync } from './sync-journal';
 import type { SyncBackend, SyncCommit, SyncRead } from './sync-types';
 import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit } from './workspace';
+import { ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   try { return await invoke<T>(command, args); }
@@ -16,6 +17,11 @@ export class SqliteRepository implements LocalRepository, SyncBackend {
   syncRead(documentId: string) { return call<SyncRead>('sync_read', { documentId }); }
   syncCommit(request: SyncCommit) { return call<void>('sync_commit', { request }); }
   syncCredential(deviceId: string) { return call<string | null>('sync_credential', { deviceId }); }
+  shareCredentialWrite(access: ShareAccess) { return call<void>('share_credential_write', { access: ShareAccessSchema.parse(access) }); }
+  async shareCatalogRead(id: string) { const value = await call<unknown>('share_catalog_read', { id }); return value === null ? null : ShareCatalogSchema.parse(value); }
+  shareCatalogWrite(catalog: ShareCatalog) { return call<void>('share_catalog_write', { catalog: ShareCatalogSchema.parse(catalog) }); }
+  shareContextRead() { return call<string | null>('share_context_read'); }
+  shareContextWrite(id: string | null) { if (id !== null) ShareAccessSchema.shape.id.parse(id); return call<void>('share_context_write', { id }); }
   async workspaceRead() { const state = await call<unknown>('workspace_read'); return state === null ? null : WorkspaceStateSchema.parse(state); }
   workspaceWrite(input: WorkspaceCommit) { checkWorkspaceCommit(input); return call<void>('workspace_write', { input }); }
   remove(documentId: string, expectedVersion: number) { return call<void>('local_remove', { documentId, expectedVersion }); }

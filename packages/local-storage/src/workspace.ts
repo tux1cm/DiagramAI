@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { WorkspaceKeySchema, WorkspaceFolderSchema } from '@diagramai/sync-core';
+import { WorkspaceKeySchema, WorkspaceFolderSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 import { LocalConflict } from './types';
 
 export const WorkspaceStateSchema = z.object({
@@ -8,6 +8,7 @@ export const WorkspaceStateSchema = z.object({
   folders: z.array(WorkspaceFolderSchema.extend({ pending: z.boolean() })).max(100),
   drawings: z.array(z.object({ localId: z.uuid(), cloudId: z.uuid(), folderId: z.uuid(), operationId: z.uuid(), published: z.boolean() }).strict()).max(100),
   ignoredLocalIds: z.array(z.uuid()).max(10000),
+  shares: z.array(z.object({ id: z.uuid(), kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict()).max(100).optional(),
 }).strict();
 export type WorkspaceState = z.infer<typeof WorkspaceStateSchema>;
 export interface WorkspaceCommit { expectedGeneration: number | null; state: WorkspaceState; key?: string }
@@ -15,6 +16,11 @@ export interface WorkspaceBackend {
   workspaceRead(): Promise<WorkspaceState | null>;
   workspaceWrite(input: WorkspaceCommit): Promise<void>;
   syncCredential(id: string): Promise<string | null>;
+  shareCredentialWrite(access: ShareAccess): Promise<void>;
+  shareCatalogRead(id: string): Promise<ShareCatalog | null>;
+  shareCatalogWrite(catalog: ShareCatalog): Promise<void>;
+  shareContextRead(): Promise<string | null>;
+  shareContextWrite(id: string | null): Promise<void>;
 }
 export function checkWorkspaceCommit(input: WorkspaceCommit) {
   WorkspaceStateSchema.parse(input.state);

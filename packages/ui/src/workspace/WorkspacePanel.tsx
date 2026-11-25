@@ -1,45 +1,70 @@
 import { useState } from 'react';
 import type { ProjectSessionSnapshot } from '@diagramai/local-storage';
-import { parseWorkspaceLink } from '@diagramai/sync-core';
+import { parseWorkspaceLink, parseShareLink } from '@diagramai/sync-core';
 import type { WorkspaceController } from './useWorkspace';
+import type { SharedController } from './useShared';
+import { Icon } from '../editor/Icon';
 
-export function WorkspacePanel({ workspace, local, linkBase, close, files }: { workspace: WorkspaceController; local: ProjectSessionSnapshot; linkBase: string; close: () => void; files: () => void }) {
-  const { library, state, busy, error } = workspace;
-  const [inputLink, setInputLink] = useState(''), [projectTitle, setProjectTitle] = useState(''), [drawingTitle, setDrawingTitle] = useState(''), [share, setShare] = useState('');
-  const run = (work: () => Promise<void>) => { void library.perform(work); };
+export function WorkspacePanel({ workspace, shared, local, linkBase, files }: { workspace: WorkspaceController; shared: SharedController; local: ProjectSessionSnapshot; linkBase: string; files: () => void }) {
+  const { library, state } = workspace;
+  const [inputLink, setInputLink] = useState(''), [projectTitle, setProjectTitle] = useState(''), [drawingTitle, setDrawingTitle] = useState('');
+  const [share, setShare] = useState<{ url: string; title: string; scope: string; owner?: boolean } | null>(null), [copyMessage, setCopyMessage] = useState('');
+  const scoped = shared.active, busy = scoped ? shared.busy : workspace.busy;
+  const error = scoped ? shared.error : workspace.error;
+  const folders = scoped ? shared.catalog?.folders ?? [] : state?.folders ?? [];
+  const mappings = scoped ? shared.mappings : state?.drawings ?? [];
+  const selectedId = scoped ? folders[0]?.id : state?.selectedFolderId;
+  const selected = folders.find((folder) => folder.id === selectedId);
+  const root = !scoped && workspace.view === 'projects';
+  const run = (work: () => Promise<void>) => { void (scoped ? shared.library : library).perform(work); };
   const currentId = local.store.getSnapshot().document.documentId;
-  const selected = state?.folders.find((folder) => folder.id === state.selectedFolderId);
-  return <div className="workspace-panel project-manager">
+  const showEditor = () => scoped ? shared.library.showEditor() : library.showEditor();
+  const cards = scoped ? shared.catalog?.drawings ?? [] : state?.drawings.filter((item) => item.folderId === selectedId).map((item) => ({ id: item.cloudId, folderId: item.folderId, title: local.projects.find((record) => record.documentId === item.localId)?.title ?? 'Bản vẽ chưa tải' })) ?? [];
+  const reveal = async (kind: 'project' | 'drawing', id: string, title: string) => {
+    const url = await library.createScopedLink(linkBase, kind, id); setShare({ url, title, scope: kind === 'project' ? 'mọi bản vẽ trong Project này' : 'chỉ bản vẽ này' }); setCopyMessage('');
+  };
+  return <section className="workspace-surface workspace-panel" aria-label={root ? 'Kho Project' : 'Bản vẽ trong Project'}>
+    <header className="workspace-heading"><div className="workspace-breadcrumb">
+      {!scoped && <button className="btn" onClick={library.showProjects}>Kho</button>}
+      {!root && <><span>/</span><h2>{selected?.title ?? (scoped ? 'Đang mở link chia sẻ…' : 'Project')}</h2></>}
+      {root && <h2>Tất cả Project</h2>}{scoped && <span className="local-badge">Link chia sẻ · Xem &amp; sửa</span>}
+    </div><div className="project-actions">
+      <button className="btn" disabled={busy} onClick={() => run(() => scoped ? shared.library.synchronize(true) : library.synchronize(true))}>{busy ? 'Đang cập nhật…' : 'Cập nhật kho ngay'}</button>
+      {(!scoped || mappings.some((item) => item.localId === currentId)) && <button className="btn" onClick={showEditor}>Trở lại bản vẽ</button>}
+      {scoped && <button className="btn" onClick={() => run(async () => { await shared.library.leave(); window.history.replaceState(null, '', `${window.location.pathname}#/`); library.showProjects(); })}>Về kho của tôi</button>}
+    </div></header>
     {error && <div className="storage-error" role="alert">{error}</div>}
-    {!state ? <>
-      <p>Một kho chung cho Desktop và Web, không đăng nhập, không ghép mã từng bản vẽ. Tạo kho một lần rồi dùng cùng link riêng trên các máy.</p>
-      <p>Tạo kho sẽ đưa các bản vẽ hiện có trên máy này vào “Dự án đầu tiên”. Không gộp các bản trùng tên hoặc xóa bản cũ.</p>
+    {share && <section className="confirmation share-result" aria-label="Link chia sẻ đã tạo"><strong>{share.title}</strong><p>{share.owner ? 'Đây là quyền toàn bộ kho. Chỉ dùng để kết nối thiết bị của bạn; không dùng thay link chia sẻ Project hoặc bản vẽ.' : `Ai có link đều xem và sửa được ${share.scope}. Không cấp quyền sang Project hoặc bản vẽ khác.`}</p>
+      <textarea aria-label="Link chia sẻ" readOnly value={share.url} rows={2} spellCheck={false} autoComplete="off" onFocus={(event) => event.target.select()}/>
+      <button className="btn" onClick={() => { void navigator.clipboard?.writeText(share.url).then(() => setCopyMessage('Đã sao chép link.')).catch(() => setCopyMessage('Chọn link rồi nhấn Ctrl+C.')); }}>Sao chép link</button><button className="btn" onClick={() => setShare(null)}>Ẩn link</button><span role="status">{copyMessage}</span>
+    </section>}
+    {!scoped && !state ? <div className="workspace-setup">
+      <h3>Mở kho của bạn</h3><p>Một kho cho Desktop và Web. Chia sẻ riêng từng Project hoặc bản vẽ từ thẻ tương ứng sau khi tạo kho.</p>
       <button className="btn primary" disabled={busy || workspace.loading} onClick={() => run(() => library.create())}>Tạo kho riêng và đưa bản vẽ trên máy vào kho</button>
       <form className="workspace-form" onSubmit={(event) => { event.preventDefault(); run(() => library.connect(parseWorkspaceLink(inputLink))); }}>
-        <label>Đã có kho? Dán link riêng<textarea aria-label="Link riêng vào kho" value={inputLink} onChange={(event) => setInputLink(event.target.value)} rows={3} autoComplete="off" spellCheck={false}/></label>
-        <button className="btn" disabled={busy || !inputLink.trim()}>Mở kho bằng link riêng</button>
+        <label>Link kho của tôi<textarea aria-label="Link riêng vào kho" value={inputLink} onChange={(event) => setInputLink(event.target.value)} rows={2} autoComplete="off" spellCheck={false}/></label><button className="btn" disabled={busy || !inputLink.trim()}>Mở kho bằng link riêng</button>
       </form>
-    </> : <>
-      <div className="project-actions"><button className="btn" disabled={busy} onClick={() => run(() => library.synchronize(true))}>{busy ? 'Đang cập nhật kho…' : 'Cập nhật kho ngay'}</button><button className="btn" onClick={() => run(async () => { setShare(await library.shareLink(linkBase)); })}>Hiện link riêng của kho</button></div>
-      {share && <section className="confirmation"><p><strong>Ai có link này có quyền vào toàn bộ kho.</strong> Giữ riêng, không gửi vào chat hoặc đăng công khai. Desktop chỉ cần dán link một lần; Web mở bằng link này. Hãy sao lưu link để không mất quyền khi xóa dữ liệu máy.</p><textarea aria-label="Link truy cập riêng của kho" readOnly value={share} rows={3} spellCheck={false} autoComplete="off" onFocus={(event) => event.target.select()}/><button className="btn small" onClick={() => setShare('')}>Ẩn link riêng</button></section>}
-      <form className="workspace-form" onSubmit={(event) => { event.preventDefault(); run(async () => { await library.createFolder(projectTitle); setProjectTitle(''); }); }}>
-        <label>Tên dự án mới<input aria-label="Tên dự án mới" value={projectTitle} maxLength={100} onChange={(event) => setProjectTitle(event.target.value)}/></label><button className="btn" disabled={busy || !projectTitle.trim()}>Tạo dự án</button>
-      </form>
-      <div className="workspace-browser">
-        <nav aria-label="Danh sách dự án">{state.folders.map((folder) => <button key={folder.id} className={`btn ${folder.id === selected?.id ? 'primary' : ''}`} aria-pressed={folder.id === selected?.id} onClick={() => run(() => library.selectFolder(folder.id))}>{folder.title}{folder.pending ? ' · Chờ gửi' : ''}</button>)}</nav>
-        <section aria-label="Các bản vẽ trong dự án"><h4>{selected?.title ?? 'Chọn dự án'}</h4>
-          <form className="workspace-form" onSubmit={(event) => { event.preventDefault(); run(async () => { await library.createDrawing(drawingTitle); close(); }); }}>
-            <label>Tên bản vẽ mới<input aria-label="Tên bản vẽ mới" value={drawingTitle} maxLength={100} onChange={(event) => setDrawingTitle(event.target.value)}/></label><button className="btn primary" disabled={busy || !selected || !drawingTitle.trim()}>Tạo bản vẽ</button>
-          </form>
-          <ul className="project-list">{state.drawings.filter((drawing) => drawing.folderId === selected?.id).map((drawing) => {
-            const record = local.projects.find((item) => item.documentId === drawing.localId);
-            return <li key={drawing.cloudId}><strong>{record?.title ?? 'Bản vẽ chưa tải trên máy'}</strong>{drawing.localId === currentId && <span> · Đang mở</span>}<small>{drawing.published ? 'Đã có trong kho' : 'Đã lưu local · Chờ đưa vào kho'}</small><button className="btn small" disabled={!record || local.busy} aria-label={`Mở bản vẽ ${record?.title ?? ''}`} onClick={() => run(async () => { await library.open(drawing.localId); close(); })}>Mở</button></li>;
-          })}</ul>
-          {!state.drawings.some((drawing) => drawing.localId === currentId) && <button className="btn" disabled={busy || !selected} onClick={() => run(async () => { await library.enroll(currentId); await library.synchronize(); })}>Đưa bản đang mở vào dự án này</button>}
-        </section>
+    </div> : <>
+      {!scoped && <form className="workspace-form workspace-create" onSubmit={(event) => { event.preventDefault(); run(async () => { if (root) { await library.createFolder(projectTitle); setProjectTitle(''); } else await library.createDrawing(drawingTitle); }); }}>
+        <label>{root ? 'Tên Project mới' : 'Tên bản vẽ mới'}<input aria-label={root ? 'Tên dự án mới' : 'Tên bản vẽ mới'} value={root ? projectTitle : drawingTitle} maxLength={100} onChange={(event) => root ? setProjectTitle(event.target.value) : setDrawingTitle(event.target.value)}/></label>
+        <button className="btn primary" disabled={busy || !(root ? projectTitle : drawingTitle).trim()}>{root ? 'Tạo dự án' : 'Tạo bản vẽ'}</button>
+      </form>}
+      <div className="workspace-cards" role="list" aria-label={root ? 'Danh sách Project' : 'Danh sách bản vẽ'}>
+        {root ? folders.map((folder) => <article className="workspace-card" key={folder.id} role="listitem" data-project-id={folder.id}>
+          <button className="workspace-card-open" aria-label={folder.title} onClick={() => run(() => library.selectFolder(folder.id))}><Icon name="file" size="lg"/><strong>{folder.title}</strong><small>{state?.drawings.filter((item) => item.folderId === folder.id).length ?? 0} bản vẽ</small></button>
+          <button className="btn small" disabled={busy || state?.folders.find((item) => item.id === folder.id)?.pending} aria-label={`Chia sẻ Project ${folder.title}`} onClick={() => run(() => reveal('project', folder.id, folder.title))}>Chia sẻ</button>
+        </article>) : cards.map((drawing) => {
+          const mapping = mappings.find((item) => item.cloudId === drawing.id), record = local.projects.find((item) => item.documentId === mapping?.localId);
+          const title = record?.title ?? drawing.title;
+          return <article className="workspace-card" key={drawing.id} role="listitem" data-drawing-id={drawing.id}>
+            <button className="workspace-card-open" aria-label={`Mở bản vẽ ${title}`} disabled={!mapping || local.busy} onClick={() => run(() => scoped ? shared.library.open(mapping!.localId) : library.open(mapping!.localId))}><Icon name="file" size="lg"/><strong>{title}</strong><small>{record ? `${record.nodeCount} hình · ${record.edgeCount} đường nối` : 'Đang tải bản vẽ…'}</small></button>
+            {!scoped && <button className="btn small" disabled={busy || !state?.drawings.find((item) => item.cloudId === drawing.id)?.published} aria-label={`Chia sẻ bản vẽ ${title}`} onClick={() => run(() => reveal('drawing', drawing.id, title))}>Chia sẻ</button>}
+          </article>;
+        })}
       </div>
-      <p>Tạo/thêm bản vẽ trên máy này sẽ tự đưa vào dự án đang chọn. Bản local có sẵn trên máy mới và nhánh xung đột không tự gộp vào kho. Offline vẫn lưu local; có mạng sẽ gửi tiếp.</p>
+      {!root && !cards.length && !busy && <p className="workspace-empty">Project chưa có bản vẽ.</p>}
+      {!root && !scoped && !state?.drawings.some((drawing) => drawing.localId === currentId) && <button className="btn" disabled={busy || !selected} onClick={() => run(async () => { await library.enroll(currentId); await library.synchronize(true); })}>Đưa bản đang mở vào dự án này</button>}
     </>}
-    <button className="btn" onClick={files}>File / Bản vẽ chỉ trên máy / Checkpoint</button>
-  </div>;
+    {!scoped && <footer className="workspace-utilities"><button className="btn" onClick={files}>File / Bản vẽ chỉ trên máy / Checkpoint</button><details><summary>Mở link Project / bản vẽ</summary><form className="workspace-form" onSubmit={(event) => { event.preventDefault(); void shared.library.perform(async () => { const access = parseShareLink(inputLink); window.history.replaceState(null, '', `${window.location.pathname}#/share/${access.id}`); await shared.library.connect(access.id, access.key); }); }}><label>Link được chia sẻ<textarea aria-label="Link Project hoặc bản vẽ" value={inputLink} onChange={(event) => setInputLink(event.target.value)} autoComplete="off" spellCheck={false}/></label><button className="btn" disabled={!inputLink.trim()}>Mở link chia sẻ</button></form></details>{state && <details><summary>Kết nối thiết bị của tôi</summary><p>Link dưới đây là quyền toàn kho của riêng bạn, không dùng để chia sẻ một Project/bản vẽ.</p><button className="btn" onClick={() => run(async () => { setShare({ url: await library.shareLink(linkBase), title: 'Link riêng toàn kho · chỉ dùng cho thiết bị của bạn', scope: 'toàn bộ kho', owner: true }); })}>Hiện link riêng của kho</button></details>}</footer>}
+  </section>;
 }

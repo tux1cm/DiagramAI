@@ -16,9 +16,10 @@ import type { CloudController } from '../cloud/useCloud';
 import type { WorkspaceController } from '../workspace/useWorkspace';
 import { WorkspacePanel } from '../workspace/WorkspacePanel';
 import { isTauri } from '@tauri-apps/api/core';
+import type { SharedController } from '../workspace/useShared';
 
-type Dialog = 'help' | 'cloud' | 'files' | 'export' | 'workspace' | null;
-export function EditorShell({ store, session, local, basePath, cloud, workspace }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string; cloud: CloudController; workspace: WorkspaceController }) {
+type Dialog = 'help' | 'cloud' | 'files' | 'export' | null;
+export function EditorShell({ store, session, local, basePath, cloud, workspace, shared }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string; cloud: CloudController; workspace: WorkspaceController; shared: SharedController }) {
   const state = useDiagram(store), document = state.document;
   const [tab, setTab] = useState<InspectorTab>('ai');
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -32,6 +33,8 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace 
   const files = useFileActions(session, onError);
   const saveFile = files.save;
   const saveStatus = { loading: 'Đang mở…', dirty: 'Chưa lưu · Có thay đổi', saving: 'Đang lưu trên máy…', saved: 'Đã lưu trên máy', error: 'Lỗi lưu trên máy', conflict: 'Xung đột · Chưa lưu' }[local.status];
+  const browsing = shared.active ? shared.view !== 'editor' || !shared.catalog : workspace.view !== 'editor';
+  const browse = () => { setDialog(null); if (shared.active) shared.library.showList(); else workspace.library.showProjects(); };
   useEffect(() => { if (!notice) return; const timeout = setTimeout(() => setNotice(''), 5000); return () => clearTimeout(timeout); }, [notice]);
   const execute = useCallback((commands: DiagramCommand[], label: string) => executeSafely(store, commands, label, onError), [store, onError]);
   const remove = useCallback(() => { const selected = store.getSnapshot().selection; if (selected.nodeIds.length || selected.edgeIds.length) execute([{ type: 'remove', ...selected }], 'Xóa đối tượng'); }, [store, execute]);
@@ -54,7 +57,7 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace 
     setConnectionStyle(style);
     setNotice('Kéo từ một điểm neo của hình này sang hình khác để nối.');
   }, [store, execute]);
-  const addShape = (shape: PaletteShape) => { if ((NODE_SHAPES as readonly string[]).includes(shape)) canvas.current?.addShape(shape as NodeShape); else lineTool(shape); };
+  const addShape = (shape: PaletteShape) => { if (browsing) return; if ((NODE_SHAPES as readonly string[]).includes(shape)) canvas.current?.addShape(shape as NodeShape); else lineTool(shape); };
   useEffect(() => {
     const typing = (target: EventTarget | null) => target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable=true]'));
     const paste = async () => {
@@ -67,6 +70,7 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace 
     };
     const keydown = (event: KeyboardEvent) => {
       if (session.isExternalUpdating()) return;
+      if (browsing) return;
       if (event.defaultPrevented || event.isComposing || typing(event.target) || globalThis.document.querySelector('[aria-modal=true]')) return;
       const key = event.key.toLowerCase(), ctrl = event.ctrlKey || event.metaKey;
       if (ctrl && ['z', 'y', 'a', 'c', 'v', 'x', 'd', 's', 'g'].includes(key)) {
@@ -96,12 +100,12 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace 
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [store, execute, duplicate, remove, group, ungroup, onError, saveFile, session]);
+  }, [store, execute, duplicate, remove, group, ungroup, onError, saveFile, session, browsing]);
   const hasSelection = Boolean(state.selection.nodeIds.length || state.selection.edgeIds.length);
   const membership = workspace.state?.drawings.find((drawing) => drawing.localId === document.documentId);
-  const projectTitle = membership ? workspace.state?.folders.find((folder) => folder.id === membership.folderId)?.title : 'Chỉ trên máy';
+  const projectTitle = shared.active ? shared.catalog?.folders[0]?.title : membership ? workspace.state?.folders.find((folder) => folder.id === membership.folderId)?.title : 'Chỉ trên máy';
   return <div id="app" className="editor-app" data-phase="p5">
-    <Topbar title={document.title} projectTitle={projectTitle ?? 'Dự án'} status={saveStatus} cloudStatus={!cloud.link ? membership ? 'Chờ gửi' : 'Chỉ local' : cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]} cloudBusy={cloud.busy || cloud.state.status === 'syncing'} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={(kind) => setDialog(kind === 'cloud' && !cloud.link ? 'workspace' : kind)}/>
+    <Topbar title={document.title} projectTitle={projectTitle ?? 'Project'} browseTitle={browsing ? shared.active ? projectTitle ?? 'Link chia sẻ' : workspace.view === 'projects' ? 'Kho / Tất cả Project' : workspace.state?.folders.find((folder) => folder.id === workspace.state?.selectedFolderId)?.title ?? 'Project' : undefined} status={saveStatus} cloudStatus={!cloud.link ? membership ? 'Chờ gửi' : 'Chỉ local' : cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]} cloudBusy={cloud.busy || cloud.state.status === 'syncing'} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={(kind) => { if (kind === 'workspace' || kind === 'cloud' && !cloud.link) browse(); else setDialog(kind); }}/>
     {(local.status === 'error' || local.status === 'conflict' || local.message) && <div className="storage-banner" role="alert">{local.message} <button onClick={() => setDialog('files')}>Dự phòng / Khôi phục</button></div>}
     <section className="workarea">
       <aside className="rail" aria-label="Công cụ">
@@ -110,19 +114,18 @@ export function EditorShell({ store, session, local, basePath, cloud, workspace 
         <button className={`railbtn ${tool === 'pan' ? 'active' : ''}`} title="Di chuyển canvas" onClick={() => setTool('pan')}><Icon name="hand" size="lg"/></button>
         <button className={`railbtn ${tool === 'link' ? 'active' : ''}`} title="Tạo đường nối" onClick={() => setTool('link')}><Icon name="link" size="lg"/></button>
         <button className="railbtn" title="Trợ lý AI" aria-expanded={!inspectorCollapsed} onClick={() => { setInspectorCollapsed(!inspectorCollapsed); setTab('ai'); }}><Icon name="sparkle" size="lg"/></button>
-        <button className={`railbtn ${dialog === 'workspace' ? 'active' : ''}`} aria-busy={workspace.busy} title="Quản lý dự án" onClick={() => setDialog('workspace')}><Icon name="file" size="lg"/></button>
+        <button className={`railbtn ${browsing ? 'active' : ''}`} aria-busy={shared.active ? shared.busy : workspace.busy} title="Quản lý dự án" aria-label="Kho" onClick={browse}><Icon name="file" size="lg"/></button>
         <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P5" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
       </aside>
       <Palette collapsed={paletteCollapsed} addShape={addShape}/>
-      <main className="canvas-column"><Toolbar zoom={zoom} tool={tool} setTool={setTool} changeZoom={(value) => canvas.current?.zoomTo(value)} fit={() => canvas.current?.fit()} undo={() => store.undo()} redo={() => store.redo()} canUndo={Boolean(state.past.length || state.interaction)} canRedo={Boolean(state.future.length)} duplicate={duplicate} remove={remove} hasSelection={hasSelection}/>
-        <DiagramCanvas ref={canvas} store={store} tool={tool} snap={snap} connectionStyle={connectionStyle} onTool={setTool} onZoom={setZoom} onLineTool={lineTool} onError={onError} onAi={showAi} fitIcon={<Icon name="fit"/>} aiIcon={<Icon name="sparkle"/>}/>
+      <main className="canvas-column"><Toolbar zoom={zoom} tool={tool} setTool={setTool} changeZoom={(value) => canvas.current?.zoomTo(value)} fit={() => canvas.current?.fit()} undo={() => { if (!browsing) store.undo(); }} redo={() => { if (!browsing) store.redo(); }} canUndo={!browsing && Boolean(state.past.length || state.interaction)} canRedo={!browsing && Boolean(state.future.length)} duplicate={duplicate} remove={remove} hasSelection={!browsing && hasSelection}/>
+        {browsing ? <WorkspacePanel workspace={workspace} shared={shared} local={local} linkBase={isTauri() ? 'https://tux1cm.github.io/DiagramAI/' : new URL(basePath, window.location.origin).href} files={() => setDialog('files')}/> : <DiagramCanvas ref={canvas} store={store} tool={tool} snap={snap} connectionStyle={connectionStyle} onTool={setTool} onZoom={setZoom} onLineTool={lineTool} onError={onError} onAi={showAi} fitIcon={<Icon name="fit"/>} aiIcon={<Icon name="sparkle"/>}/>}
       </main>
-      <Inspector document={document} selection={state.selection} activeTab={tab} setTab={setTab} collapsed={inspectorCollapsed} nodePatch={nodePatch} edgePatch={edgePatch} geometry={geometry} arrange={arrange} group={group} ungroup={ungroup} duplicate={duplicate} remove={remove} snap={snap} setSnap={setSnap}/>
+      {!browsing && <Inspector document={document} selection={state.selection} activeTab={tab} setTab={setTab} collapsed={inspectorCollapsed} nodePatch={nodePatch} edgePatch={edgePatch} geometry={geometry} arrange={arrange} group={group} ungroup={ungroup} duplicate={duplicate} remove={remove} snap={snap} setSnap={setSnap}/>}
       {notice && <div className="toast-stack" role="status"><div className="toast">{notice}</div></div>}
-       {dialog && <Modal title={{ help: 'DiagramAI · Đồng bộ P5', cloud: 'Trạng thái đồng bộ bản vẽ', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF', workspace: 'Quản lý dự án và bản vẽ' }[dialog]} close={close}>
+       {dialog && <Modal title={{ help: 'DiagramAI · Đồng bộ P5', cloud: 'Trạng thái đồng bộ bản vẽ', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF' }[dialog]} close={close}>
         {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Ctrl+kéo thân hình để nhân đôi; Ctrl+kéo góc để resize giữ tỷ lệ quanh tâm. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan.</p><p>Tự lưu local sau khi kết thúc chỉnh sửa. Ctrl+S lưu file, Ctrl+Shift+S lưu thành file mới. Quản lý chứa Dự án → Bản vẽ, dùng cùng link kho riêng trên Web/Desktop, không ghép từng bản. File/local/checkpoint vẫn riêng để dự phòng. Cloud giữ cả hai nhánh khi xung đột; hãy giữ link riêng và xuất .diagramai định kỳ. AI vẫn thuộc P6.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
-          {dialog === 'cloud' && <CloudPanel cloud={cloud} workspaceMode={Boolean(membership)} document={document} notice={onError} saveLocal={() => void files.save(true, true)}/>}
-          {dialog === 'workspace' && <WorkspacePanel workspace={workspace} local={local} linkBase={isTauri() ? 'https://tux1cm.github.io/DiagramAI/' : new URL(basePath, window.location.origin).href} close={close} files={() => setDialog('files')}/>}
+          {dialog === 'cloud' && <CloudPanel cloud={cloud} workspaceMode={Boolean(membership) || shared.active} document={document} notice={onError} saveLocal={() => void files.save(true, true)}/>}
          {dialog === 'files' && <ProjectsPanel session={session} state={local} close={close} notice={onError} saveFile={files.save} openFile={files.open}/>}
          {dialog === 'export' && <ExportPanel session={session} basePath={basePath} notice={onError}/>}
       </Modal>}

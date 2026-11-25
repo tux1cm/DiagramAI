@@ -1,5 +1,14 @@
 # P5 — Kho riêng chung Web ↔ Desktop
 
+## Kho và chia sẻ Project/bản vẽ
+
+- Bấm **Kho** ở rail trái hoặc thanh trên: vùng giữa hiện các thẻ Project, không popup. Mở Project để thấy các thẻ bản vẽ; mở bản vẽ để vào editor. Thanh trên hiện **Project / Tên bản vẽ**.
+- Bấm **Chia sẻ** trên thẻ Project để tạo link xem/sửa mọi bản vẽ thuộc Project đó (kể cả bản thêm sau), không thấy Project khác.
+- Bấm **Chia sẻ** trên thẻ bản vẽ để tạo link chỉ xem/sửa bản đó, không thấy bản khác. Không chọn quyền và không đăng nhập. Ai có link đều chỉnh sửa được trong phạm vi link.
+- Web: mở link trực tiếp. Desktop: **Kho → Mở link Project / bản vẽ**, dán link và mở. App nhớ context/capability sau reload/restart; có cache local khi offline.
+- Link giới hạn không thay kho riêng của người nhận và không tự đưa nội dung nhận qua share vào kho của họ. Link không cấp quản trị kho/thiết bị hoặc recovery.
+- **Kết nối thiết bị của tôi → Hiện link riêng của kho** là quyền toàn kho dành cho chủ. Không dùng link này để thay link Chia sẻ trên thẻ.
+
 ## Cách dùng mới: một kho, không ghép từng bản
 
 1. Mở **Quản lý** (nút ở rail trái hoặc thanh trên). Trên máy có bản vẽ muốn dùng làm nguồn, chọn **Tạo kho riêng và đưa bản vẽ trên máy vào kho**. Các bản hiện có vào **Dự án đầu tiên**, không gộp theo tên.

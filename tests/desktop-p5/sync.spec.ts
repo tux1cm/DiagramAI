@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { cloudButton, editCloudNode, syncNow, closeCloud, openCloud } from '../helpers/cloud';
 import { nodeModel, ready } from '../helpers/drawing';
 import { SyncClient, type WorkspaceAccess } from '@diagramai/sync-core';
-import { createWorkspace, connectWorkspace, openLibrary, closeLibrary, updateLibrary } from '../helpers/workspace';
+import { createWorkspace, connectWorkspace, openLibrary, closeLibrary, updateLibrary, openWorkspaceDrawing } from '../helpers/workspace';
 
 test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and conflicts', async ({ playwright, browser, baseURL }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows DPAPI/WebView2 integration');
@@ -39,7 +39,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
   try {
     let desk = await launch(); const source = await createWorkspace(desk, false);
     await web.goto('./'); await ready(web); await connectWorkspace(web, source.link);
-    await web.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true }).click();
+    await openWorkspaceDrawing(web, source.title);
     await editCloudNode(desk, 'Tiếp nhận vật tư', 'Desktop qua Web'); await syncNow(desk);
     await syncNow(web); await closeCloud(web); await expect(nodeModel(web, 'Desktop qua Web')).toBeVisible();
     await editCloudNode(web, 'Desktop qua Web', 'Web về Desktop'); await syncNow(web);
@@ -71,7 +71,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     await closeLibrary(web); await openLibrary(web);
     await web.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Dự án từ Web');
     await web.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
-    await expect(web.getByRole('button', { name: 'Dự án từ Web', exact: true })).toBeVisible();
+    await expect(web.getByRole('heading', { name: 'Dự án từ Web', exact: true })).toBeVisible();
     await web.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture mới từ Web');
     await web.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click();
     await expect(web.locator('.project-name')).toContainText('Dự án từ Web / P5 fixture mới từ Web');
@@ -79,6 +79,22 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     await desk.getByRole('button', { name: 'Dự án từ Web', exact: true }).click();
     await expect(desk.getByRole('button', { name: 'Mở bản vẽ P5 fixture mới từ Web', exact: true })).toBeVisible();
     await desk.screenshot({ path: testInfo.outputPath('desktop-p5-workspace-catalog.png') });
+    await openLibrary(desk);
+    await desk.getByRole('button', { name: 'Chia sẻ Project Dự án đầu tiên', exact: true }).click();
+    const shareField = desk.getByRole('textbox', { name: 'Link chia sẻ', exact: true }); await expect(shareField).toBeVisible();
+    const scopedLink = await shareField.inputValue(); await desk.getByRole('button', { name: 'Ẩn link', exact: true }).click();
+    await desk.getByText('Mở link Project / bản vẽ', { exact: true }).click();
+    await desk.getByRole('textbox', { name: 'Link Project hoặc bản vẽ', exact: true }).fill(scopedLink);
+    await desk.getByRole('button', { name: 'Mở link chia sẻ', exact: true }).click();
+    await expect(desk.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true })).toBeVisible();
+    await expect(desk.getByText('Dự án từ Web', { exact: true })).toHaveCount(0);
+    await desk.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true }).click(); await ready(desk);
+    await stop(); desk = await launch();
+    await expect(nodeModel(desk, 'Nhánh Web cloud')).toBeVisible();
+    await openLibrary(desk); await expect(desk.getByText('Dự án từ Web', { exact: true })).toHaveCount(0);
+    for (const file of readdirSync(vault)) expect(readFileSync(join(vault, file)).includes(Buffer.from('dai_share_v1_'))).toBe(false);
+    expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_share_v1_'))).toBe(false);
+    await desk.screenshot({ path: testInfo.outputPath('desktop-scoped-project.png') });
   } finally {
     await stop(); await webContext.close();
     if (managed && workspaceAccess) await new SyncClient(managed).deleteWorkspace(workspaceAccess);
