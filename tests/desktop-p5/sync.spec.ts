@@ -26,6 +26,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     nativeBrowser = await playwright.chromium.connectOverCDP(`http://127.0.0.1:${port}`);
     const context = nativeBrowser.contexts()[0]; await expect.poll(() => context.pages().length).toBeGreaterThan(0);
     const page = context.pages()[0];
+    await page.bringToFront(); // WebView2 can throttle first-fit frames while its target is occluded.
     if (managed) page.on('request', (request) => {
       if (request.url() === `${managed}v1/workspaces` && request.method() === 'POST') workspaceAccess = request.postDataJSON();
     });

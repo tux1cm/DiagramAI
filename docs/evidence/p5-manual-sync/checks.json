@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-25",
+  "applicationCommit": "f88c414",
+  "unitBoundary": { "passed": 35 },
+  "rustWorkspaceShareArchive": { "passed": 3 },
+  "webScenarios": { "passed": 5, "ciRun": 45562009513 },
+  "pagesRun": 45562269106,
+  "nativeProduction": { "passed": 1, "testSeconds": 42.1, "harnessSeconds": 55.6, "realNativeCloseSendsPendingDrawing": true },
+  "livePublic": { "passed": 1, "testSeconds": 23.7, "harnessSeconds": 25.6 },
+  "userDevicesAutomaticallyRelinked": false
+}

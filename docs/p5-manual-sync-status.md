@@ -1,6 +1,6 @@
 # P5 — Đồng bộ thủ công hai chiều
 
-Ngày 2026-11-25. Trạng thái: đồng bộ thủ công source/Web và CI/Pages PASS; đang chốt thêm đổi kho an toàn theo lựa chọn dùng kho Web của chủ dự án và kiểm tra installer cuối.
+Ngày 2026-11-25. Trạng thái: **đã triển khai đồng bộ thủ công hai chiều và đổi kho an toàn; CI source, Pages, native installer và live public PASS**. Chờ chủ dán link kho Web vào Desktop để nối thiết bị thật; không tự lấy/đổi credential của chủ.
 
 - Cả Web và Desktop tạo Project/bản vẽ, gửi/nhận qua nút Đồng bộ toàn kho. Không còn cloud timer/focus/online hoặc tự gửi khi tạo; local tự lưu như cũ.
 - Sửa điểm nghẽn publish local lỗi làm chặn discovery bản mới. Vẫn hiện lỗi/chờ gửi, không báo đồng bộ hết khi chưa ACK hoặc có xung đột.
@@ -10,5 +10,9 @@ Ngày 2026-11-25. Trạng thái: đồng bộ thủ công source/Web và CI/Page
 - Không đổi API/schema/quota/billing; không cần migration/deploy API. Bản production trước vẫn được giữ trong `File/Previous/` khi thu thập build mới.
 - Read-only diagnostic production: có **hai workspace khác nhau** cùng chứa Project SNP, tổng cộng một bản vẽ publish. Chủ đã chọn **kho Web làm kho chung**, không xóa/gộp dữ liệu cũ. Thêm mã kho không bí mật và thao tác đổi kho có xác nhận, archive catalog cũ bằng CAS transaction, giữ DPAPI/IndexedDB credential và mọi bản local/outbox; mở lại archive khi cần.
 - Bản đồng bộ thủ công `0def08a`: CI [45559703709](https://github.com/tux1cm/DiagramAI/actions/runs/45559703709) và Pages [45559729867](https://github.com/tux1cm/DiagramAI/actions/runs/45559729867) **SUCCESS**. Lượt installer production đầu dừng ở bước Web mở kho nguồn trả 401; helper chưa kiểm chứng provisioning ACK trước khi lấy link, không tính PASS. Đã thêm chờ/sync rõ ràng trước khi trả link; app không hiện link kho chưa provision ACK. Cần lượt installer cuối xác minh.
+- Đổi kho an toàn đã push `f88c414`; CI [45562009513](https://github.com/tux1cm/DiagramAI/actions/runs/45562009513) **SUCCESS**, gồm cả 5 Web case. Pages [45562024382](https://github.com/tux1cm/DiagramAI/actions/runs/45562024382) lỗi tra artifact trên GitHub; chạy lại cùng source [45562269106](https://github.com/tux1cm/DiagramAI/actions/runs/45562269106) **SUCCESS**, không sửa/nới test. Chưa chuyển thiết bị thật của chủ dự án: cần chủ dán link kho Web trực tiếp trong Desktop, không lấy khóa từ DB hoặc đưa khóa vào chat/Git.
+- Installer production cuối **3.932.767 bytes**, `testBuild=false`, SHA-256 `a665ae6d07bc8fd3e0d2af482ddcc97e6a8d8690fd6f3e0121985ea12ec3bc03`; tại `File/Desktop_Light/DiagramAI_Setup_x64.exe`. Manifest trong `docs/evidence/p5-manual-sync/`.
+- **Native installer production 1/1 PASS**, 42,1 giây testcase / 55,6 giây harness: sửa hai chiều, nhận Project/bản vẽ mới từ Web, tạo bản trên Desktop, gửi khi **yêu cầu đóng cửa sổ native thật** và Web nhận sau khi tiến trình đã thoát; DPAPI/restart, share scope và conflict vẫn PASS. Một lượt trước bị first-fit frame chưa sẵn sàng lúc WebView bị che; helper đưa target lên foreground trước kiểm tra, không thay điều kiện ready/timeout hoặc skip testcase.
+- **Live public 1/1 PASS**, 23,7 giây testcase / 25,6 giây harness trên Pages mới: Web sửa hai chiều qua API production, nhận bản mới, scope Project không lộ Project khác. Chỉ fixture của test được xóa. Evidence: [`evidence/p5-manual-sync/`](evidence/p5-manual-sync/).
 
 Thiết kế: [ADR 0009](decisions/0009-p5-manual-two-way-sync.md). Hướng dẫn: [p5-usage.md](p5-usage.md).
