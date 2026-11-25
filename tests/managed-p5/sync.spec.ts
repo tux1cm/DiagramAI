@@ -26,7 +26,7 @@ test('private workspace catalog and drawings via Web CSP/CORS → managed Neon F
     await target.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click();
     await expect(target.locator('.project-name')).toContainText('Dự án managed / P5 fixture managed mới');
     await updateLibrary(target); await updateLibrary(page); await page.getByRole('button', { name: 'Dự án managed', exact: true }).click();
-    await openWorkspaceDrawing(page, 'P5 fixture managed mới'); await closeLibrary(page);
+    await openWorkspaceDrawing(page, 'P5 fixture managed mới', 'Dự án managed'); await closeLibrary(page);
     await openLibrary(page); await page.getByRole('button', { name: 'Chia sẻ Project Dự án đầu tiên', exact: true }).click();
     const field = page.getByRole('textbox', { name: 'Link chia sẻ', exact: true }); await expect(field).toBeVisible(); const link = await field.inputValue(); await page.getByRole('button', { name: 'Ẩn link', exact: true }).click();
     await recipient.goto(link); await expect(recipient.getByRole('button', { name: `Mở bản vẽ ${created.title}`, exact: true })).toBeVisible({ timeout: 20000 });

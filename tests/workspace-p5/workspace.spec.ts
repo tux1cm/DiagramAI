@@ -22,7 +22,7 @@ test('one private workspace discovers projects and drawings both ways, preserves
     await expect(page.locator('.project-name')).toContainText('Dự án kiểm tra / P5 fixture bản vẽ mới');
     await updateLibrary(page); await updateLibrary(target);
     await openLibrary(target); await target.getByRole('button', { name: 'Dự án kiểm tra', exact: true }).click();
-    await openWorkspaceDrawing(target, 'P5 fixture bản vẽ mới');
+    await openWorkspaceDrawing(target, 'P5 fixture bản vẽ mới', 'Dự án kiểm tra');
     await renameDrawing(target, 'P5 fixture sửa từ Web'); await updateLibrary(target); await closeLibrary(target);
     await updateLibrary(page); await closeLibrary(page); await expect(page.locator('.project-name')).toContainText('P5 fixture sửa từ Web');
     await target.reload(); await ready(target); await openLibrary(target);

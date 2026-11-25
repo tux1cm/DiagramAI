@@ -51,9 +51,13 @@ export async function connectWorkspace(page: Page, link: string, viaFragment = t
     await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
   }
 }
-export async function openWorkspaceDrawing(page: Page, title: string) {
-  if (!await page.locator('.workspace-surface').count()) await openLibrary(page);
-  if (!await page.getByRole('button', { name: `Mở bản vẽ ${title}`, exact: true }).count()) await page.getByRole('button', { name: 'Dự án đầu tiên', exact: true }).click();
+export async function openWorkspaceDrawing(page: Page, title: string, project = 'Dự án đầu tiên') {
+  // Selection is persisted asynchronously. Never infer a missing drawing from
+  // count() immediately after a click: that raced the faster localhost CI DB.
+  await openLibrary(page);
+  await page.getByRole('button', { name: project, exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Bản vẽ trong Project', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Mở bản vẽ ${title}`, exact: true })).toBeVisible({ timeout: 20000 });
   await page.getByRole('button', { name: `Mở bản vẽ ${title}`, exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0); await ready(page); await expect(page.locator('.project-name')).toContainText(title);
 }
