@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { SyncClient, workspaceLink } from '@diagramai/sync-core';
+import { SyncApiError, SyncClient, workspaceLink } from '@diagramai/sync-core';
+import { setTimeout as delay } from 'node:timers/promises';
 import { ready } from './drawing';
 
 export async function openLibrary(page: Page) {
@@ -33,9 +34,17 @@ export async function createWorkspace(page: Page, navigate = true) {
   // Provision a disposable test fixture through the API, not through a public
   // per-device "create another workspace" button. The product opens one main link.
   const access = { id: randomUUID(), key: `dai_workspace_v1_${randomBytes(32).toString('base64url')}` };
-  const api = new SyncClient(process.env.DIAGRAMAI_NATIVE_MANAGED_API ?? process.env.DIAGRAMAI_MANAGED_TEST_API ?? 'http://127.0.0.1:8787/');
+  const apiBase = process.env.DIAGRAMAI_NATIVE_MANAGED_API ?? process.env.DIAGRAMAI_MANAGED_TEST_API ?? 'http://127.0.0.1:8787/';
+  const api = new SyncClient(apiBase);
   try {
-  await api.createWorkspace(access);
+  try { await api.createWorkspace(access); }
+  catch (error) {
+    // Six disposable fixtures can cross the real 5/min cap on fast Linux CI.
+    // Respect Retry-After once, with the SAME capability; never reset counters,
+    // raise the server limit, retry DAILY_LIMIT, or retry production provisioning.
+    if (!(error instanceof SyncApiError) || error.code !== 'RATE_LIMITED' || !['127.0.0.1', 'localhost'].includes(new URL(apiBase).hostname) || !error.retryAfterMs) throw error;
+    await delay(error.retryAfterMs); await api.createWorkspace(access);
+  }
   await api.workspaceFolder(access, { id: randomUUID(), title: 'Dự án đầu tiên' });
   const currentUrl = new URL(page.url());
   const link = workspaceLink(currentUrl.hostname === 'tauri.localhost' || currentUrl.protocol === 'tauri:' ? 'https://tux1cm.github.io/DiagramAI/' : `${currentUrl.origin}${currentUrl.pathname}`, access);
