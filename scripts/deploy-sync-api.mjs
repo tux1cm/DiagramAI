@@ -3,9 +3,11 @@ import { randomBytes } from 'node:crypto';
 import { Pool } from 'pg';
 import { fileURLToPath } from 'node:url';
 import { migrateSync } from './sync-test-database.mjs';
+import { verifySyncExport } from './verified-sync-export.mjs';
 
-const [project, target, mode] = process.argv.slice(2), production = mode === '--production';
+const [project, target, mode, backupMode, backupFile] = process.argv.slice(2), production = mode === '--production';
 if (!project || !target || !/^[a-z0-9-]+$/.test(project) || !/^[a-zA-Z0-9_-]+$/.test(target) || mode && !production) throw new Error('Usage: deploy-sync-api.mjs <existing-project-id> <explicit-branch-id> [--production]');
+if (backupMode && (!production || backupMode !== '--verified-export' || !backupFile) || backupFile && backupMode !== '--verified-export') throw new Error('An explicit --verified-export <encrypted-file> is allowed only with --production.');
 const cwd = fileURLToPath(new URL('../apps/api/', import.meta.url));
 function neon(args, extraEnv = {}) {
   const result = spawnSync(process.platform === 'win32' ? 'neon.cmd' : 'neon', args, { cwd, encoding: 'utf8', shell: process.platform === 'win32', env: { ...process.env, CI: '1', ...extraEnv }, maxBuffer: 8 * 1024 * 1024 });
@@ -22,7 +24,7 @@ const branch = branches.find((item) => item.id === target || item.name === targe
 if (!branch || branch.protected) throw new Error('Unknown/protected target; refusing changes.');
 if (production ? !(branch.id === target && branch.primary && branch.default) : branch.primary || branch.default || /prod/i.test(branch.name)) throw new Error('Production needs its exact branch ID plus --production; dev deployment cannot target production.');
 let backupId = null;
-if (production) {
+if (production && !backupFile) {
   const stamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
   const backup = JSON.parse(neon(['snapshots', 'create', '--project-id', project, '--branch', branch.id, '--name', `p5-before-sync-${stamp}`, '--output', 'json']));
   backupId = backup.snapshot?.id ?? backup.id;
@@ -32,7 +34,11 @@ const raw = neon(['connection-string', branch.id, '--project-id', project]).matc
 if (!raw) throw new Error('No database URL received; credentials were not logged.');
 const uri = new URL(raw); uri.searchParams.set('sslmode', 'verify-full');
 const pool = new Pool({ connectionString: uri.toString(), max: 1, connectionTimeoutMillis: 15000, statement_timeout: 15000 });
-try { await migrateSync(pool); } finally { await pool.end(); }
+try {
+  if (production && backupFile) backupId = await verifySyncExport(backupFile, project, branch.id, pool);
+  if (production && !backupId) throw new Error('No verified backup; migration not started.');
+  await migrateSync(pool);
+} finally { await pool.end(); }
 // Secrets travel in the child environment, not argv, files, frontend variables
 // or transcript output. --no-env-pull prevents writing a plaintext .env copy.
 neon(['deploy', '--project-id', project, '--branch', branch.id, '--config', 'neon.ts', '--update-existing', '--no-env-pull', '--output', 'json'], {

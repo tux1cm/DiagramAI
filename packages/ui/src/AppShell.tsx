@@ -8,6 +8,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { createInitialDocument } from './editor/initial-document';
 import { useCloud } from './cloud/useCloud';
 import { hasEditorDraft } from './editor/drafts';
+import { useWorkspace } from './workspace/useWorkspace';
 
 const nodes = [
   { id: 'p0-a', position: { x: 0, y: 0 }, data: { label: 'React Flow v12' } },
@@ -19,6 +20,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
   const [session] = useState(() => new ProjectSession(isTauri() ? new SqliteRepository() : new IndexedDbRepository(), createInitialDocument));
   const local = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const cloud = useCloud(session, local, apiBaseUrl);
+  const workspace = useWorkspace(session, local, apiBaseUrl, cloud.synchronizeDocument);
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -62,7 +64,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <div className="editor-root" inert={session.isExternalUpdating()}><EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath} cloud={cloud}/></div>;
+  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <div className="editor-root" inert={session.isExternalUpdating()}><EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath} cloud={cloud} workspace={workspace}/></div>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>
@@ -85,7 +87,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
         <button onClick={() => void probe()} disabled={!apiBaseUrl || busy}>Kiểm tra API</button>
         <p role="status">{health}</p>
       </section>
-      <p>Editor P4 lưu local trên máy. AI và đồng bộ cloud chưa bật; trang kiểm tra không gửi nội dung sơ đồ.</p>
+      <p>Editor P5 lưu local và đồng bộ kho riêng qua Neon. Trang kiểm tra này chỉ query health, không gửi sơ đồ. AI chưa bật.</p>
     </main>
   );
 }

@@ -13,19 +13,23 @@ const raw = command.status === 0 && command.stdout.match(/postgres(?:ql)?:\/\/[^
 if (!raw) throw new Error('Could not receive database credentials; output suppressed.');
 const uri = new URL(raw); uri.searchParams.set('sslmode', 'verify-full');
 const pool = new Pool({ connectionString: uri.toString(), max: 1, connectionTimeoutMillis: 15000, statement_timeout: 30000 });
-const tables = ['schema_migrations', 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget'];
+const tables = ['schema_migrations', 'workspaces', 'workspace_folders', 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget', 'workspace_drawings'];
 const backup = { format: 'diagramai-sync-admin-backup-v1', project, branch, createdAt: new Date().toISOString(), migrations: {}, tables: {} };
 try {
   const db = await pool.connect();
   try {
     await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    for (const name of tables) backup.tables[name] = (await db.query(`SELECT coalesce(json_agg(t),'[]'::json) AS rows FROM diagramai_sync.${name} t`)).rows[0].rows;
+    for (const name of tables) {
+      const exists = (await db.query('SELECT to_regclass($1) AS relation', [`diagramai_sync.${name}`])).rows[0].relation;
+      if (!exists && ['workspaces', 'workspace_folders', 'workspace_drawings'].includes(name)) continue;
+      backup.tables[name] = (await db.query(`SELECT coalesce(json_agg(t),'[]'::json) AS rows FROM diagramai_sync.${name} t`)).rows[0].rows;
+    }
     await db.query('COMMIT');
   } catch { await db.query('ROLLBACK').catch(() => {}); throw new Error('Backup read failed; no database changes or credential output.'); }
   finally { db.release(); }
 } finally { await pool.end(); }
 const migrations = new URL('../apps/api/migrations/', import.meta.url);
-for (const file of (await readdir(migrations)).filter((name) => name.endsWith('.up.sql')).sort()) backup.migrations[file] = await readFile(new URL(file, migrations), 'utf8');
+for (const file of (await readdir(migrations)).filter((name) => name.endsWith('.up.sql') && backup.tables.schema_migrations.some((migration) => migration.version === Number(name.split('_')[0]))).sort()) backup.migrations[file] = await readFile(new URL(file, migrations), 'utf8');
 const bytes = Buffer.from(JSON.stringify(backup)), sha256 = createHash('sha256').update(bytes).digest('hex');
 function protect(input, decrypt = false) {
   const method = decrypt ? 'Unprotect' : 'Protect';

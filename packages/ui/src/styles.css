@@ -2,6 +2,15 @@
 @import '@diagramai/editor/styles.css';
 #root { height: 100%; }
 .editor-root { height: 100%; }
+.workspace-panel textarea { display: block; width: 100%; min-width: 0; padding: 8px; border: 1px solid #dce3ef; border-radius: 7px; }
+.workspace-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 16px 0; }
+.workspace-form label { flex: 1; min-width: 180px; }
+.workspace-form input { display: block; width: 100%; }
+.workspace-browser { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr); gap: 16px; }
+.workspace-browser nav { display: flex; flex-direction: column; gap: 8px; }
+.workspace-browser nav button { white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.workspace-browser section { min-width: 0; }
+.workspace-project-title { color: #66758e; }
 .cloud-panel textarea { display: block; width: 100%; padding: 8px; border: 1px solid #dce3ef; border-radius: 7px; resize: vertical; }
 .cloud-panel section { margin: 16px 0; }
 .cloud-panel code { overflow-wrap: anywhere; }

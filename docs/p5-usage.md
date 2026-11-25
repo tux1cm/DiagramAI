@@ -1,4 +1,25 @@
-# P5 — Dùng đồng bộ riêng tư Web ↔ Desktop
+# P5 — Kho riêng chung Web ↔ Desktop
+
+## Cách dùng mới: một kho, không ghép từng bản
+
+1. Mở **Quản lý** (nút ở rail trái hoặc thanh trên). Trên máy có bản vẽ muốn dùng làm nguồn, chọn **Tạo kho riêng và đưa bản vẽ trên máy vào kho**. Các bản hiện có vào **Dự án đầu tiên**, không gộp theo tên.
+2. Chọn **Hiện link riêng của kho**, sao lưu toàn bộ link vào nơi riêng tư. **Ai có link có quyền truy cập toàn bộ kho**; không gửi link vào chat hoặc đăng công khai. Link không chứa mật khẩu Neon.
+3. Trên Web, mở link đó; trên Desktop, dán link vào **Quản lý → Đã có kho? Dán link riêng → Mở kho bằng link riêng**. Chỉ làm lần đầu, thiết bị/trình duyệt sẽ nhớ kho. Không ghép mã cho từng bản vẽ.
+4. Trong Quản lý, chọn **Dự án → Bản vẽ → Mở**. Thanh trên hiện **Tên dự án / Tên bản vẽ**. Sửa như bình thường; local và cloud tự lưu, chỉ báo **Đã đồng bộ** sau server ACK.
+5. Tạo dự án/bản vẽ mới ở bên nào cũng tự xuất hiện bên kia khi có mạng (poll khoảng 15 giây khi app đang mở; có nút **Cập nhật kho ngay**).
+
+### Dữ liệu cũ và offline
+
+- Khi mở một kho trên máy khác, các bản local đã có trên máy đó **giữ riêng**, không bị đè hay tự gộp vào kho. Mở chúng từ **File / Bản vẽ chỉ trên máy / Checkpoint**; muốn đưa vào kho thì mở bản đó, chọn dự án và bấm **Đưa bản đang mở vào dự án này**.
+- Bản mới/import/copy sau khi đã mở kho tự vào dự án đang chọn. Nhánh xung đột giữ local riêng, không tự đẩy lại cloud.
+- Offline vẫn tạo/sửa và lưu local. Có mạng thì tiếp tục gửi hàng đợi; không xóa site/app data khi còn dữ liệu chưa dự phòng.
+- Link kho là quyền chung, không phải tài khoản hoặc quyền từng thiết bị. Mất link và mất mọi thiết bị còn nhớ kho thì không có email để khôi phục. Không để link trong file `.diagramai`.
+- Liên kết P5 cũ chỉ có quyền editor cần được đưa vào kho từ thiết bị owner; không tự thay quyền, bỏ pending edits hay nhân bản để lách quyền.
+
+<details>
+<summary>Tham khảo liên kết P5 từng sơ đồ cũ và vận hành backup</summary>
+
+Phần dưới giữ hướng dẫn tương thích dữ liệu P5 cũ; không phải luồng bắt đầu của kho chung mới.
 
 ## Bắt đầu
 
@@ -34,3 +55,5 @@ App kiểm tra cloud khoảng 15 giây khi đang mở/visible, khi focus hoặc 
 - Export độc lập dữ liệu schema ứng dụng bằng `node scripts/backup-sync-database.mjs blue-mode-25353507 br-noisy-waterfall-b37wduo3`. File được mã hóa **DPAPI CurrentUser** ngoài repo tại `%LOCALAPPDATA%/Temp/opencode/diagramai-backups/`, gồm dữ liệu `diagramai_sync` + up migrations; script mở lại/giải mã và xác minh SHA-256. Đây không phải dump toàn DB. Chỉ tài khoản Windows hiện tại giải mã được; cần chuyển bản dự phòng vào kho quản trị bền vững, không xóa thư mục temp trước khi làm việc đó. Không tự upload backup hoặc keys.
 - Kiểm tra restore an toàn: `node scripts/verify-sync-backup.mjs <file.json.dpapi> blue-mode-25353507 br-soft-surf-b3hws0gm`. Script từ chối production; tạo schema dev ngẫu nhiên trong transaction, đối chiếu migrations với nguồn tin cậy, nạp mọi bảng theo constraints/kiểm tra counts rồi rollback, không thay dữ liệu hiện có. Không tự restore đè dữ liệu production.
 - Chỉ test P5 và điểm nối P4→P5 trong giai đoạn này. Full regression để cuối P7, không tự bắt đầu P6.
+
+</details>

@@ -25,7 +25,8 @@ fn crypt(bytes: &[u8], encrypt: bool) -> Result<Vec<u8>> {
 fn crypt(_: &[u8], _: bool) -> Result<Vec<u8>> { Err("Kho quyền thiết bị chưa hỗ trợ nền tảng này; không lưu token dạng plain text.".into()) }
 
 pub fn write(database: &Path, id: &str, token: &str) -> Result<()> {
-    if !token.starts_with("dai_device_v1_") || token.len()!=57 || !token[14..].bytes().all(|byte| byte.is_ascii_alphanumeric() || byte==b'_' || byte==b'-') { return Err("Token thiết bị không hợp lệ.".into()); }
+    let suffix=token.strip_prefix("dai_device_v1_").or_else(||token.strip_prefix("dai_workspace_v1_"));
+    if !suffix.is_some_and(|value|value.len()==43&&value.bytes().all(|byte|byte.is_ascii_alphanumeric()||byte==b'_'||byte==b'-')) { return Err("Token thiết bị/kho không hợp lệ.".into()); }
     let path = path(database,id)?; let parent = path.parent().ok_or("Không có thư mục quyền.")?;
     std::fs::create_dir_all(parent).map_err(|_| "Không tạo được kho quyền Windows.")?;
     let encrypted = crypt(token.as_bytes(),true)?;

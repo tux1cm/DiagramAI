@@ -18,3 +18,5 @@ async fn blocking<T: Send + 'static>(work: impl FnOnce() -> storage::Result<T> +
 #[tauri::command] pub async fn sync_read(state: Shared<'_>, document_id:String)->storage::Result<crate::sync::Read> {let p=path(&state)?;blocking(move||crate::sync::read(&p,&document_id)).await}
 #[tauri::command] pub async fn sync_commit(state: Shared<'_>, request:crate::sync::Commit)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::sync::commit(&p,request)).await}
 #[tauri::command] pub async fn sync_credential(state: Shared<'_>, device_id:String)->storage::Result<Option<String>> {let p=path(&state)?;blocking(move||crate::sync::credential(&p,&device_id)).await}
+#[tauri::command] pub async fn workspace_read(state: Shared<'_>)->storage::Result<Option<serde_json::Value>> {let p=path(&state)?;blocking(move||crate::workspace::read(&p)).await}
+#[tauri::command] pub async fn workspace_write(state: Shared<'_>,input:crate::workspace::Commit)->storage::Result<()> {let p=path(&state)?;blocking(move||crate::workspace::write(&p,input)).await}

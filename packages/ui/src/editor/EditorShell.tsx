@@ -13,9 +13,12 @@ import { ProjectsPanel } from '../files/ProjectsPanel';
 import { ExportPanel } from '../files/ExportPanel';
 import { CloudPanel, CLOUD_LABELS } from '../cloud/CloudPanel';
 import type { CloudController } from '../cloud/useCloud';
+import type { WorkspaceController } from '../workspace/useWorkspace';
+import { WorkspacePanel } from '../workspace/WorkspacePanel';
+import { isTauri } from '@tauri-apps/api/core';
 
-type Dialog = 'help' | 'cloud' | 'files' | 'export' | null;
-export function EditorShell({ store, session, local, basePath, cloud }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string; cloud: CloudController }) {
+type Dialog = 'help' | 'cloud' | 'files' | 'export' | 'workspace' | null;
+export function EditorShell({ store, session, local, basePath, cloud, workspace }: { store: DiagramStore; session: ProjectSession; local: ProjectSessionSnapshot; basePath: string; cloud: CloudController; workspace: WorkspaceController }) {
   const state = useDiagram(store), document = state.document;
   const [tab, setTab] = useState<InspectorTab>('ai');
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -95,8 +98,10 @@ export function EditorShell({ store, session, local, basePath, cloud }: { store:
     return () => window.removeEventListener('keydown', keydown);
   }, [store, execute, duplicate, remove, group, ungroup, onError, saveFile, session]);
   const hasSelection = Boolean(state.selection.nodeIds.length || state.selection.edgeIds.length);
+  const membership = workspace.state?.drawings.find((drawing) => drawing.localId === document.documentId);
+  const projectTitle = membership ? workspace.state?.folders.find((folder) => folder.id === membership.folderId)?.title : 'Chỉ trên máy';
   return <div id="app" className="editor-app" data-phase="p5">
-    <Topbar title={document.title} status={saveStatus} cloudStatus={!cloud.link ? 'Chưa bật' : cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]} cloudBusy={cloud.busy || cloud.state.status === 'syncing'} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={setDialog}/>
+    <Topbar title={document.title} projectTitle={projectTitle ?? 'Dự án'} status={saveStatus} cloudStatus={!cloud.link ? membership ? 'Chờ gửi' : 'Chỉ local' : cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]} cloudBusy={cloud.busy || cloud.state.status === 'syncing'} save={() => void files.save()} openFile={() => void files.open()} rename={(title) => execute([{ type: 'rename', title }], 'Đổi tên sơ đồ')} open={(kind) => setDialog(kind === 'cloud' && !cloud.link ? 'workspace' : kind)}/>
     {(local.status === 'error' || local.status === 'conflict' || local.message) && <div className="storage-banner" role="alert">{local.message} <button onClick={() => setDialog('files')}>Dự phòng / Khôi phục</button></div>}
     <section className="workarea">
       <aside className="rail" aria-label="Công cụ">
@@ -105,6 +110,7 @@ export function EditorShell({ store, session, local, basePath, cloud }: { store:
         <button className={`railbtn ${tool === 'pan' ? 'active' : ''}`} title="Di chuyển canvas" onClick={() => setTool('pan')}><Icon name="hand" size="lg"/></button>
         <button className={`railbtn ${tool === 'link' ? 'active' : ''}`} title="Tạo đường nối" onClick={() => setTool('link')}><Icon name="link" size="lg"/></button>
         <button className="railbtn" title="Trợ lý AI" aria-expanded={!inspectorCollapsed} onClick={() => { setInspectorCollapsed(!inspectorCollapsed); setTab('ai'); }}><Icon name="sparkle" size="lg"/></button>
+        <button className={`railbtn ${dialog === 'workspace' ? 'active' : ''}`} aria-busy={workspace.busy} title="Quản lý dự án" onClick={() => setDialog('workspace')}><Icon name="file" size="lg"/></button>
         <div className="rail-spacer"/><button className="railbtn" title="Hướng dẫn và trạng thái P5" onClick={() => setDialog('help')}><Icon name="help" size="lg"/></button>
       </aside>
       <Palette collapsed={paletteCollapsed} addShape={addShape}/>
@@ -113,9 +119,10 @@ export function EditorShell({ store, session, local, basePath, cloud }: { store:
       </main>
       <Inspector document={document} selection={state.selection} activeTab={tab} setTab={setTab} collapsed={inspectorCollapsed} nodePatch={nodePatch} edgePatch={edgePatch} geometry={geometry} arrange={arrange} group={group} ungroup={ungroup} duplicate={duplicate} remove={remove} snap={snap} setSnap={setSnap}/>
       {notice && <div className="toast-stack" role="status"><div className="toast">{notice}</div></div>}
-       {dialog && <Modal title={{ help: 'DiagramAI · Đồng bộ P5', cloud: 'Đồng bộ Web ↔ Desktop', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF' }[dialog]} close={close}>
-        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Ctrl+kéo thân hình để nhân đôi; Ctrl+kéo góc để resize giữ tỷ lệ quanh tâm. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan.</p><p>Tự lưu local sau khi kết thúc chỉnh sửa. Ctrl+S lưu file, Ctrl+Shift+S lưu thành file mới. Nút Sơ đồ quản lý nhiều bản vẽ/checkpoint; file ngoài ổ đĩa chỉ ghi khi bạn yêu cầu. Cloud cho phép bật đồng bộ từng dự án, ghép thiết bị bằng mã một lần và giữ cả hai nhánh khi xung đột. Nên xuất .diagramai và giữ mã khôi phục riêng tư. AI vẫn thuộc P6.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
-         {dialog === 'cloud' && <CloudPanel cloud={cloud} document={document} notice={onError} saveLocal={() => void files.save(true, true)}/>}
+       {dialog && <Modal title={{ help: 'DiagramAI · Đồng bộ P5', cloud: 'Trạng thái đồng bộ bản vẽ', files: 'Sơ đồ và file trên máy', export: 'Xuất SVG / PNG / PDF', workspace: 'Quản lý dự án và bản vẽ' }[dialog]} close={close}>
+        {dialog === 'help' && <><p>Kéo/thả hình từ thư viện, kéo điểm neo để nối. Ctrl+kéo thân hình để nhân đôi; Ctrl+kéo góc để resize giữ tỷ lệ quanh tâm. Nhấp đúp hình/nhãn cạnh để sửa chữ; Enter xác nhận, Shift+Enter xuống dòng, Esc hủy.</p><p>Thả hình rời lên đường nối sáng tím để chèn A→C→B; Ctrl+Z khôi phục cả cạnh và vị trí hình. Nhãn điều kiện giữ trên đoạn trước hình mới.</p><p>Shift+Click hoặc kéo vùng trống để đa chọn. Ctrl+C/V/X/D/A, Ctrl+Z/Y, Ctrl+G/Shift+G, Delete và phím mũi tên; Space+kéo để pan.</p><p>Tự lưu local sau khi kết thúc chỉnh sửa. Ctrl+S lưu file, Ctrl+Shift+S lưu thành file mới. Quản lý chứa Dự án → Bản vẽ, dùng cùng link kho riêng trên Web/Desktop, không ghép từng bản. File/local/checkpoint vẫn riêng để dự phòng. Cloud giữ cả hai nhánh khi xung đột; hãy giữ link riêng và xuất .diagramai định kỳ. AI vẫn thuộc P6.</p><a className="diagnostic-link" href="#/spike">Kiểm tra nền tảng</a></>}
+          {dialog === 'cloud' && <CloudPanel cloud={cloud} workspaceMode={Boolean(membership)} document={document} notice={onError} saveLocal={() => void files.save(true, true)}/>}
+          {dialog === 'workspace' && <WorkspacePanel workspace={workspace} local={local} linkBase={isTauri() ? 'https://tux1cm.github.io/DiagramAI/' : new URL(basePath, window.location.origin).href} close={close} files={() => setDialog('files')}/>}
          {dialog === 'files' && <ProjectsPanel session={session} state={local} close={close} notice={onError} saveFile={files.save} openFile={files.open}/>}
          {dialog === 'export' && <ExportPanel session={session} basePath={basePath} notice={onError}/>}
       </Modal>}

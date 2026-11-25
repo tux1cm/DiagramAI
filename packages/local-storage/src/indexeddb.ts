@@ -1,6 +1,7 @@
 import { LocalConflict, prepareRecord, type LocalRepository, type ProjectSummary, type SaveRequest, type StoredProject } from './types';
 import { saveWithSync } from './sync-journal';
 import type { LocalSyncLink, SyncBackend, SyncCommit, SyncRead } from './sync-types';
+import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit, type WorkspaceState } from './workspace';
 
 export class IndexedDbRepository implements LocalRepository, SyncBackend {
   readonly kind = 'indexeddb' as const;
@@ -59,6 +60,30 @@ export class IndexedDbRepository implements LocalRepository, SyncBackend {
     });
   }
   async syncCredential(deviceId: string) { return (await this.read<{ token?: string } | undefined>('device_credentials', (store) => store.get(deviceId)))?.token ?? null; }
+  async workspaceRead(): Promise<WorkspaceState | null> {
+    const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get('workspace-v1'));
+    return record ? WorkspaceStateSchema.parse(record.value) : null;
+  }
+  async workspaceWrite(input: WorkspaceCommit) {
+    checkWorkspaceCommit(input); const db = await this.open();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['settings', 'device_credentials'], 'readwrite', { durability: 'strict' }); let conflict = false;
+      tx.oncomplete = () => resolve(); tx.onabort = () => reject(conflict ? new LocalConflict() : new Error('Chưa ghi được kho trên máy.'));
+      const store = tx.objectStore('settings'), current = store.get('workspace-v1');
+      current.onsuccess = () => {
+        const old = current.result?.value as WorkspaceState | undefined;
+        if ((old?.generation ?? null) !== input.expectedGeneration || old && old.id !== input.state.id) { conflict = true; tx.abort(); return; }
+        if (!old && !input.key) { tx.abort(); return; }
+        if (old && input.key) {
+          const previous = tx.objectStore('device_credentials').get(input.state.id);
+          previous.onsuccess = () => { if (previous.result?.token !== input.key) { tx.abort(); return; } store.put({ key: 'workspace-v1', value: input.state }); };
+        } else {
+          store.put({ key: 'workspace-v1', value: input.state });
+          if (input.key) tx.objectStore('device_credentials').put({ deviceId: input.state.id, token: input.key });
+        }
+      };
+    });
+  }
   async syncCommit(request: SyncCommit): Promise<void> {
     // Hash/schema work is outside the IndexedDB transaction; CAS validates that
     // none of the records or link generations changed while it was computed.

@@ -861,6 +861,8 @@ Việc làm:
 
 ### P5 — Neon backend + đồng bộ không đăng nhập
 
+**Điều chỉnh đã chốt với chủ dự án (2026-11-23):** UI dùng một kho riêng chung Web/Desktop, phân cấp **Dự án → Bản vẽ**. Link riêng cấp quyền toàn kho thay bước ghép từng sơ đồ, không đăng nhập hoặc mở quyền sửa công khai. Rail trái có Quản lý; thanh trên hiển thị **Tên dự án / Tên bản vẽ**. Dự án/bản vẽ mới tự xuất hiện ở nền tảng kia; local/offline, CAS/outbox và giữ conflict tiếp tục như P5. Không tự gộp dữ liệu trùng tên hoặc bỏ bản cũ. Chi tiết: ADR 0007.
+
 1. Viết migrations Postgres + integration tests; tách branch dev/prod.
 2. Functions CRUD project private, CAS revision, idempotency/outbox.
 3. Tạo recovery secret + device token, hash token, ghép nối one-time code, revoke; rate limit anti brute-force.

@@ -3,17 +3,18 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cloudButton, createCloudProject, joinCloudProject, editCloudNode, syncNow, closeCloud, openCloud } from '../helpers/cloud';
+import { cloudButton, editCloudNode, syncNow, closeCloud, openCloud } from '../helpers/cloud';
 import { nodeModel, ready } from '../helpers/drawing';
-import { SyncClient } from '@diagramai/sync-core';
+import { SyncClient, type WorkspaceAccess } from '@diagramai/sync-core';
+import { createWorkspace, connectWorkspace, openLibrary, closeLibrary, updateLibrary } from '../helpers/workspace';
 
-test('P5 installed Desktop SQLite/DPAPI ↔ Web/IndexedDB, restart pending outbox and preserve conflicts', async ({ playwright, browser, baseURL }, testInfo) => {
+test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and conflicts', async ({ playwright, browser, baseURL }, testInfo) => {
   test.skip(process.platform !== 'win32', 'Windows DPAPI/WebView2 integration');
   const executable = process.env.DIAGRAMAI_TEST_EXE; if (!executable) throw new Error('Run the isolated P5 installer harness.');
   const profile = mkdtempSync(join(process.env.LOCALAPPDATA!, 'Temp', 'opencode', 'diagramai-p5-'));
   const managed = process.env.DIAGRAMAI_NATIVE_MANAGED_API;
   const apiPattern = `${managed ?? 'http://127.0.0.1:8787/'}**`;
-  let credential: { projectId: string; token: string } | undefined;
+  let workspaceAccess: WorkspaceAccess | undefined;
   let app: ReturnType<typeof spawn> | undefined, nativeBrowser: Browser | undefined, launches = 0;
   const launch = async () => {
     const server = createServer(); await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -25,8 +26,8 @@ test('P5 installed Desktop SQLite/DPAPI ↔ Web/IndexedDB, restart pending outbo
     nativeBrowser = await playwright.chromium.connectOverCDP(`http://127.0.0.1:${port}`);
     const context = nativeBrowser.contexts()[0]; await expect.poll(() => context.pages().length).toBeGreaterThan(0);
     const page = context.pages()[0];
-    if (managed) page.on('response', async (response) => {
-      if (response.url() === `${managed}v1/projects` && response.request().method() === 'POST' && response.ok()) credential = (await response.json()).credentials;
+    if (managed) page.on('request', (request) => {
+      if (request.url() === `${managed}v1/workspaces` && request.method() === 'POST') workspaceAccess = request.postDataJSON();
     });
     await ready(page); return page;
   };
@@ -36,15 +37,21 @@ test('P5 installed Desktop SQLite/DPAPI ↔ Web/IndexedDB, restart pending outbo
   };
   const webContext = await browser.newContext({ baseURL }), web = await webContext.newPage();
   try {
-    let desk = await launch(); const source = await createCloudProject(desk, false); await joinCloudProject(web, source.code);
+    let desk = await launch(); const source = await createWorkspace(desk, false);
+    await web.goto('./'); await ready(web); await connectWorkspace(web, source.link);
+    await web.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true }).click();
     await editCloudNode(desk, 'Tiếp nhận vật tư', 'Desktop qua Web'); await syncNow(desk);
     await syncNow(web); await closeCloud(web); await expect(nodeModel(web, 'Desktop qua Web')).toBeVisible();
     await editCloudNode(web, 'Desktop qua Web', 'Web về Desktop'); await syncNow(web);
     await syncNow(desk); await closeCloud(desk); await expect(nodeModel(desk, 'Web về Desktop')).toBeVisible();
     const vault = join(profile, 'data', 'device-credentials'), files = readdirSync(vault);
     expect(files.length).toBeGreaterThan(0);
-    for (const file of files) expect(readFileSync(join(vault, file)).includes(Buffer.from('dai_device_v1_'))).toBe(false);
+    for (const file of files) {
+      expect(readFileSync(join(vault, file)).includes(Buffer.from('dai_device_v1_'))).toBe(false);
+      expect(readFileSync(join(vault, file)).includes(Buffer.from('dai_workspace_v1_'))).toBe(false);
+    }
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_device_v1_'))).toBe(false);
+    expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_workspace_v1_'))).toBe(false);
     await desk.route(apiPattern, (route) => route.abort('internetdisconnected'));
     await editCloudNode(desk, 'Web về Desktop', 'Desktop offline sau restart');
     await openCloud(desk); await desk.getByRole('button', { name: 'Đồng bộ ngay', exact: true }).click(); await expect(cloudButton(desk)).toContainText('Offline');
@@ -58,11 +65,22 @@ test('P5 installed Desktop SQLite/DPAPI ↔ Web/IndexedDB, restart pending outbo
     await expect(desk.getByRole('heading', { name: 'Đã giữ cả bản local và bản cloud', exact: true })).toBeVisible({ timeout: 20000 });
     await desk.getByRole('button', { name: 'Dùng bản cloud, giữ bản local riêng', exact: true }).click();
     await expect(desk.getByRole('dialog')).toHaveCount(0); await expect(nodeModel(desk, 'Nhánh Web cloud')).toBeVisible();
-    await desk.getByRole('button', { name: 'Sơ đồ', exact: true }).click();
+    await openLibrary(desk); await desk.getByRole('button', { name: 'File / Bản vẽ chỉ trên máy / Checkpoint', exact: true }).click();
     await expect(desk.locator('.project-list')).toContainText('(xung đột local)');
     await desk.screenshot({ path: testInfo.outputPath('desktop-p5-conflict-preserved.png') });
+    await closeLibrary(web); await openLibrary(web);
+    await web.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Dự án từ Web');
+    await web.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
+    await expect(web.getByRole('button', { name: 'Dự án từ Web', exact: true })).toBeVisible();
+    await web.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture mới từ Web');
+    await web.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click();
+    await expect(web.locator('.project-name')).toContainText('Dự án từ Web / P5 fixture mới từ Web');
+    await updateLibrary(web); await closeLibrary(desk); await updateLibrary(desk);
+    await desk.getByRole('button', { name: 'Dự án từ Web', exact: true }).click();
+    await expect(desk.getByRole('button', { name: 'Mở bản vẽ P5 fixture mới từ Web', exact: true })).toBeVisible();
+    await desk.screenshot({ path: testInfo.outputPath('desktop-p5-workspace-catalog.png') });
   } finally {
     await stop(); await webContext.close();
-    if (managed && credential) await new SyncClient(managed).deleteProject(credential.projectId, credential.token);
+    if (managed && workspaceAccess) await new SyncClient(managed).deleteWorkspace(workspaceAccess);
   }
 });

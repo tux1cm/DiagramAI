@@ -66,10 +66,10 @@ export class LocalSyncJournal implements SyncPersistence {
       return { value: null, link: await staged(next, record), credential: credentials };
     });
   }
-  async join(binding: CloudBinding): Promise<string> {
+  async join(binding: CloudBinding, localId = newId()): Promise<string> {
     const snapshot = SnapshotSchema.parse(binding.snapshot), credentials = DeviceGrantSchema.parse(binding.credentials);
     if (snapshot.projectId !== credentials.projectId || await snapshotHash(snapshot.document) !== snapshot.hash) throw new Error('Bản cloud/quyền thiết bị không khớp.');
-    const id = newId(), document = parseDocument({ ...snapshot.document, documentId: id });
+    const id = localId, document = parseDocument({ ...snapshot.document, documentId: id });
     const link: LocalSyncLink = { documentId: id, projectId: snapshot.projectId, deviceId: credentials.deviceId, cloudDocumentId: snapshot.document.documentId, baseRevision: snapshot.revision, syncedHash: snapshot.hash, pending: null, conflict: null, generation: 1, conflictCopyId: null, conflictCopyHash: null };
     await this.backend.syncCommit({ documentId: id, expectedVersion: null, expectedGeneration: null, records: [await recordFor(document, 1)], link, credential: credentials });
     return id;

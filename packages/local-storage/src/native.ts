@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { LocalConflict, type LocalRepository, type ProjectSummary, type SaveRequest, type StoredProject } from './types';
 import { saveWithSync } from './sync-journal';
 import type { SyncBackend, SyncCommit, SyncRead } from './sync-types';
+import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit } from './workspace';
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   try { return await invoke<T>(command, args); }
@@ -15,6 +16,8 @@ export class SqliteRepository implements LocalRepository, SyncBackend {
   syncRead(documentId: string) { return call<SyncRead>('sync_read', { documentId }); }
   syncCommit(request: SyncCommit) { return call<void>('sync_commit', { request }); }
   syncCredential(deviceId: string) { return call<string | null>('sync_credential', { deviceId }); }
+  async workspaceRead() { const state = await call<unknown>('workspace_read'); return state === null ? null : WorkspaceStateSchema.parse(state); }
+  workspaceWrite(input: WorkspaceCommit) { checkWorkspaceCommit(input); return call<void>('workspace_write', { input }); }
   remove(documentId: string, expectedVersion: number) { return call<void>('local_remove', { documentId, expectedVersion }); }
   revisions(documentId: string) { return call<StoredProject[]>('local_revisions', { documentId }); }
   active() { return call<string | null>('local_active'); }

@@ -52,6 +52,7 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     if (session.getSnapshot().store.getSnapshot().document.documentId === documentId) await session.flush();
   }, safe) : null, [client, storage, session, safe]);
   const syncState = useSyncExternalStore(coordinator?.subscribe ?? noopSubscribe, coordinator?.getSnapshot ?? readLocalState);
+  const synchronizeDocument = useCallback(async (documentId: string, force = false) => { await coordinator?.synchronize(documentId, force); }, [coordinator]);
   const refresh = useCallback(async () => {
     const documentId = session.getSnapshot().store.getSnapshot().document.documentId;
     const current = await journal.link(documentId);
@@ -89,6 +90,7 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     return { link: current, token: credential };
   };
   return {
+    synchronizeDocument,
     link: link?.documentId === id ? link : null, busy, error, recovery, pairing: pairing?.projectId === link?.projectId ? pairing : null, devices: deviceList.projectId === link?.projectId ? deviceList.items : [],
     state: syncState.documentId === id ? syncState : localState,
     create: () => operation(async () => {

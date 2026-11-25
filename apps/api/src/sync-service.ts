@@ -2,6 +2,8 @@ import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { serializeDocument } from '@diagramai/diagram-core';
 import { CreateProjectSchema, PushSnapshotSchema, RecoverySchema, RedeemSchema, MAX_SYNC_BYTES, type CloudSnapshot, type DeviceGrant } from '@diagramai/sync-core';
+import { z } from 'zod';
+import { WorkspaceAccessSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, WorkspaceKeySchema } from '@diagramai/sync-core';
 
 export class SyncFault extends Error {
   constructor(readonly status: number, readonly code: string) { super(code); }
@@ -30,12 +32,13 @@ export class SyncService {
   // cannot roll back their rate-limit charge. No raw IP/token is stored or logged.
   async rate(route: string, address: string | null, bearer?: string) {
     const minute = Math.floor(Date.now() / 60000), day = Math.floor(Date.now() / 86400000);
-    await this.bucket(`global:${route}`, minute, route === 'create' ? 5 : route === 'redeem' || route === 'recover' ? 20 : 300, 120);
+    await this.bucket(`global:${route}`, minute, route === 'create' || route === 'workspace-create' ? 5 : route === 'redeem' || route === 'recover' ? 20 : 300, 120);
     await this.bucket(`global:${route}:day`, day, route === 'push' ? 1000 : route === 'pull' ? 30000 : 3000, 172800, 1, 'DAILY_LIMIT');
     const identity = createHmac('sha256', this.rateSecret).update(`${day}\0${address ?? 'unverified-shared'}`).digest('hex');
-    await this.bucket(`ip:${route}:${identity}`, minute, ['create', 'redeem', 'recover'].includes(route) ? 5 : 120, 120);
+    await this.bucket(`ip:${route}:${identity}`, minute, ['create', 'workspace-create', 'redeem', 'recover'].includes(route) ? 5 : 120, 120);
     if (bearer) await this.bucket(`device:${route}:${hash('rate', bearer)}`, minute, 60, 120);
     if (route === 'create') await this.bucket('global:create:day', day, 10, 172800);
+    if (route === 'workspace-create') await this.bucket('global:workspace-create:day', day, 10, 172800);
     await this.pool.query('DELETE FROM diagramai_sync.rate_limit_buckets WHERE (bucket_id,window_start) IN (SELECT bucket_id,window_start FROM diagramai_sync.rate_limit_buckets WHERE expires_at < now() LIMIT 100)');
   }
   private async bucket(id: string, window: number, limit: number, ttl: number, amount = 1, code = 'RATE_LIMITED') {
@@ -68,19 +71,22 @@ export class SyncService {
     const result = await db.query('UPDATE diagramai_sync.storage_budget SET used_bytes=used_bytes+$1 WHERE singleton=true AND used_bytes+$1 BETWEEN 0 AND $2 RETURNING used_bytes', [delta, this.limits.storageBytes]);
     if (!result.rowCount) throw new SyncFault(507, 'CLOUD_STORAGE_LIMIT');
   }
-  private async grant(db: PoolClient, projectId: string, label: string, scope: 'owner' | 'editor'): Promise<DeviceGrant> {
+  private async grant(db: PoolClient, projectId: string, label: string, scope: 'owner' | 'editor', suppliedSecret?: string): Promise<DeviceGrant> {
     // Caller holds the project lock, so device caps and issuance are atomic.
     const count = await db.query('SELECT count(*)::int AS count FROM diagramai_sync.project_devices WHERE project_id=$1', [projectId]);
     if (count.rows[0].count >= 100) throw new SyncFault(409, 'DEVICE_LIMIT');
     const active = await db.query('SELECT count(*)::int AS count FROM diagramai_sync.project_devices WHERE project_id=$1 AND revoked_at IS NULL', [projectId]);
     if (active.rows[0].count >= 10) throw new SyncFault(409, 'DEVICE_LIMIT');
-    const secret = token('device'), id = randomUUID();
+    const secret = suppliedSecret ?? token('device'), id = randomUUID();
     await db.query('INSERT INTO diagramai_sync.project_devices(id,project_id,token_hash,device_label,scope) VALUES ($1,$2,$3,$4,$5)', [id, projectId, hash('device', secret), label, scope]);
     return { projectId, deviceId: id, token: secret, scope };
   }
   async create(input: unknown) {
-    const data = CreateProjectSchema.parse(input), { payload, bytes } = this.payload(data.document, data.hash);
-    return this.tx(async (db) => {
+    const data = CreateProjectSchema.parse(input);
+    return this.tx((db) => this.createRecord(db, data));
+  }
+  private async createRecord(db: PoolClient, data: z.infer<typeof CreateProjectSchema>, id: string = randomUUID(), secret?: string) {
+      const { payload, bytes } = this.payload(data.document, data.hash);
       // A lost creation response is not silently retried with new credentials.
       // This advisory key prevents duplicate projects for the same operation ID.
       await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`create:${data.operationId}`]);
@@ -88,14 +94,113 @@ export class SyncService {
       const count = await db.query('UPDATE diagramai_sync.storage_budget SET project_count=project_count+1 WHERE singleton=true AND project_count<$1 RETURNING project_count', [this.limits.projects]);
       if (!count.rowCount) throw new SyncFault(507, 'CLOUD_PROJECT_LIMIT');
       await this.budget(db, bytes * 2);
-      const id = randomUUID(), recoveryKey = token('recovery');
+      const recoveryKey = token('recovery');
       const result = await db.query<ProjectRow>(`INSERT INTO diagramai_sync.projects(id,create_operation_id,document_id,title,current_revision,snapshot_jsonb,snapshot_hash,snapshot_bytes)
         VALUES ($1,$2,$3,$4,1,$5,$6,$7) RETURNING *`, [id, data.operationId, data.document.documentId, data.document.title, payload, data.hash, bytes]);
-      const credentials = await this.grant(db, id, data.deviceLabel, 'owner');
+      const credentials = await this.grant(db, id, data.deviceLabel, 'owner', secret);
       await db.query('INSERT INTO diagramai_sync.project_recovery(project_id,recovery_hash) VALUES ($1,$2)', [id, hash('recovery', recoveryKey)]);
       await db.query('INSERT INTO diagramai_sync.project_revisions(project_id,revision,snapshot_jsonb,snapshot_hash,snapshot_bytes,operation_id) VALUES ($1,1,$2,$3,$4,$5)', [id, payload, data.hash, bytes, data.operationId]);
       await db.query('INSERT INTO diagramai_sync.sync_operations(project_id,operation_id,device_id,base_revision,accepted_revision,snapshot_hash) VALUES ($1,$2,$3,0,1,$4)', [id, data.operationId, credentials.deviceId, data.hash]);
       return { credentials, recoveryKey, snapshot: this.snapshot(result.rows[0]) };
+  }
+  private async workspaceAuth(db: PoolClient, id: string, key: string) {
+    if (!WorkspaceKeySchema.safeParse(key).success) throw new SyncFault(401, 'ACCESS_DENIED');
+    const result = await db.query('SELECT id FROM diagramai_sync.workspaces WHERE id=$1 AND key_hash=$2 FOR UPDATE', [id, hash('workspace', key)]);
+    if (!result.rowCount) throw new SyncFault(401, 'ACCESS_DENIED');
+  }
+  private workspaceToken(key: string, projectId: string) {
+    return `dai_device_v1_${createHmac('sha256', key).update(`workspace-drawing\0${projectId.toLowerCase()}`).digest('base64url')}`;
+  }
+  async workspaceCreate(input: unknown) {
+    const data = WorkspaceAccessSchema.parse(input);
+    return this.tx(async (db) => {
+      await db.query("SELECT pg_advisory_xact_lock(hashtextextended('diagramai-workspaces',0))");
+      const existing = await db.query('SELECT key_hash FROM diagramai_sync.workspaces WHERE id=$1', [data.id]);
+      if (existing.rowCount) {
+        if (existing.rows[0].key_hash !== hash('workspace', data.key)) throw new SyncFault(401, 'ACCESS_DENIED');
+      } else {
+        if (Number((await db.query('SELECT count(*) AS count FROM diagramai_sync.workspaces')).rows[0].count) >= 20) throw new SyncFault(507, 'WORKSPACE_LIMIT');
+        await db.query('INSERT INTO diagramai_sync.workspaces(id,key_hash) VALUES ($1,$2)', [data.id, hash('workspace', data.key)]);
+      }
+      return { id: data.id.toLowerCase() };
+    });
+  }
+  async workspaceCatalog(id: string, key: string) {
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      const folders = await db.query('SELECT id,title FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 ORDER BY title,id', [id]);
+      const drawings = await db.query('SELECT p.id,d.folder_id AS "folderId",p.title,p.current_revision::double precision AS revision FROM diagramai_sync.workspace_drawings d JOIN diagramai_sync.projects p ON p.id=d.project_id WHERE d.workspace_id=$1 ORDER BY p.title,p.id', [id]);
+      return { id: id.toLowerCase(), folders: folders.rows, drawings: drawings.rows };
+    });
+  }
+  async workspaceFolder(id: string, key: string, input: unknown) {
+    const folder = WorkspaceFolderSchema.parse(input);
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      const existing = await db.query('SELECT workspace_id,title FROM diagramai_sync.workspace_folders WHERE id=$1', [folder.id]);
+      if (existing.rowCount) {
+        if (existing.rows[0].workspace_id !== id.toLowerCase() || existing.rows[0].title !== folder.title) throw new SyncFault(409, 'FOLDER_CONFLICT');
+      } else {
+        if (Number((await db.query('SELECT count(*) AS count FROM diagramai_sync.workspace_folders WHERE workspace_id=$1', [id])).rows[0].count) >= 100) throw new SyncFault(507, 'FOLDER_LIMIT');
+        await db.query('INSERT INTO diagramai_sync.workspace_folders(id,workspace_id,title) VALUES ($1,$2,$3)', [folder.id, id, folder.title]);
+      }
+      return folder;
+    });
+  }
+  private async workspaceBinding(db: PoolClient, workspaceId: string, key: string, projectId: string) {
+    const result = await db.query<ProjectRow & { device_id: string }>('SELECT p.*,d.device_id FROM diagramai_sync.workspace_drawings d JOIN diagramai_sync.projects p ON p.id=d.project_id WHERE d.workspace_id=$1 AND d.project_id=$2', [workspaceId, projectId]);
+    if (!result.rowCount) throw new SyncFault(404, 'DRAWING_NOT_FOUND');
+    const row = result.rows[0];
+    return { snapshot: this.snapshot(row), credentials: { projectId: row.id, deviceId: row.device_id, token: this.workspaceToken(key, row.id), scope: 'owner' as const } };
+  }
+  async workspaceDrawingAccess(id: string, key: string, projectId: string) {
+    return this.tx(async (db) => { await this.workspaceAuth(db, id, key); return this.workspaceBinding(db, id, key, projectId); });
+  }
+  async workspaceDrawingCreate(id: string, key: string, input: unknown) {
+    const data = WorkspaceCreateDrawingSchema.parse(input);
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      const folder = await db.query('SELECT id FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, data.folderId]);
+      if (!folder.rowCount) throw new SyncFault(404, 'FOLDER_NOT_FOUND');
+      const existing = await db.query('SELECT p.id,p.document_id FROM diagramai_sync.projects p JOIN diagramai_sync.workspace_drawings d ON d.project_id=p.id WHERE d.workspace_id=$1 AND p.create_operation_id=$2', [id, data.project.operationId]);
+      if (existing.rowCount) {
+        if (existing.rows[0].document_id !== data.project.document.documentId.toLowerCase()) throw new SyncFault(409, 'OPERATION_REUSED');
+        return this.workspaceBinding(db, id, key, existing.rows[0].id);
+      }
+      const created = await this.createRecord(db, data.project, data.id, this.workspaceToken(key, data.id));
+      await db.query('INSERT INTO diagramai_sync.workspace_drawings(project_id,workspace_id,folder_id,device_id) VALUES ($1,$2,$3,$4)', [data.id, id, data.folderId, created.credentials.deviceId]);
+      return { snapshot: created.snapshot, credentials: created.credentials };
+    });
+  }
+  async workspaceAdopt(id: string, key: string, input: unknown) {
+    const data = WorkspaceAdoptSchema.parse(input);
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      await this.authorize(db, data.projectId, data.token, true);
+      await db.query('SELECT id FROM diagramai_sync.projects WHERE id=$1 FOR UPDATE', [data.projectId]);
+      if (!(await db.query('SELECT id FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, data.folderId])).rowCount) throw new SyncFault(404, 'FOLDER_NOT_FOUND');
+      const existing = await db.query('SELECT workspace_id FROM diagramai_sync.workspace_drawings WHERE project_id=$1', [data.projectId]);
+      if (existing.rowCount && existing.rows[0].workspace_id !== id.toLowerCase()) throw new SyncFault(409, 'DRAWING_IN_OTHER_WORKSPACE');
+      if (!existing.rowCount) {
+        const grant = await this.grant(db, data.projectId, data.deviceLabel, 'owner', this.workspaceToken(key, data.projectId));
+        await db.query('INSERT INTO diagramai_sync.workspace_drawings(project_id,workspace_id,folder_id,device_id) VALUES ($1,$2,$3,$4)', [data.projectId, id, data.folderId, grant.deviceId]);
+      }
+      return this.workspaceBinding(db, id, key, data.projectId);
+    });
+  }
+  async workspaceDelete(id: string, key: string) {
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      const projects = await db.query('SELECT p.id,p.snapshot_bytes FROM diagramai_sync.projects p JOIN diagramai_sync.workspace_drawings d ON d.project_id=p.id WHERE d.workspace_id=$1 FOR UPDATE OF p', [id]);
+      let released = 0;
+      for (const project of projects.rows) {
+        const retained = await db.query('SELECT coalesce(sum(snapshot_bytes),0)::bigint AS bytes FROM diagramai_sync.project_revisions WHERE project_id=$1', [project.id]);
+        released += Number(project.snapshot_bytes) + Number(retained.rows[0].bytes);
+        await db.query('DELETE FROM diagramai_sync.projects WHERE id=$1', [project.id]);
+      }
+      await db.query('UPDATE diagramai_sync.storage_budget SET used_bytes=used_bytes-$1,project_count=project_count-$2 WHERE singleton', [released, projects.rowCount]);
+      await db.query('DELETE FROM diagramai_sync.workspace_folders WHERE workspace_id=$1', [id]);
+      await db.query('DELETE FROM diagramai_sync.workspaces WHERE id=$1', [id]);
     });
   }
   async pull(projectId: string, bearer: string): Promise<CloudSnapshot>;

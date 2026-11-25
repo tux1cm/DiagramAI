@@ -3,5 +3,6 @@
 export function hasEditorDraft() {
   if (document.querySelector('.inline-node-editor,.inline-edge-editor,.project-name input')) return true;
   const active = document.activeElement;
+  if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && active.closest('.workspace-panel') && !active.readOnly && active.value.trim()) return true;
   return (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && Boolean(active.closest('.prop-content')) && active.value !== active.defaultValue;
 }

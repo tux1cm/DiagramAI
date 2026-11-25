@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { DiagramDocument } from '@diagramai/diagram-core';
 import { CreatedProjectSchema, DeviceLabelSchema, JoinedProjectSchema, PushReceiptSchema, SnapshotSchema, snapshotHash, type PushSnapshot } from './protocol';
+import { WorkspaceAccessSchema, WorkspaceCatalogSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, type WorkspaceAccess } from './workspace';
 
 export class SyncApiError extends Error {
   constructor(readonly status: number, readonly code: string, readonly retryAfterMs = 0) { super(code); }
@@ -78,4 +79,29 @@ export class SyncClient {
   }
   async revoke(projectId: string, token: string, deviceId: string) { await this.request(`v1/projects/${projectKey(projectId)}/devices/${z.uuid().parse(deviceId).toLowerCase()}`, 'DELETE', token); }
   async deleteProject(projectId: string, token: string) { await this.request(`v1/projects/${projectKey(projectId)}`, 'DELETE', token); }
+  async createWorkspace(access: WorkspaceAccess) {
+    const checked = WorkspaceAccessSchema.parse(access);
+    const result = z.object({ id: z.uuid() }).strict().parse(await this.request('v1/workspaces', 'POST', undefined, checked));
+    if (result.id !== checked.id) throw new SyncApiError(502, 'WORKSPACE_MISMATCH');
+  }
+  async deleteWorkspace(access: WorkspaceAccess) { const checked = WorkspaceAccessSchema.parse(access); await this.request(`v1/workspaces/${checked.id}`, 'DELETE', checked.key); }
+  async workspaceCatalog(access: WorkspaceAccess) {
+    const checked = WorkspaceAccessSchema.parse(access), result = WorkspaceCatalogSchema.parse(await this.request(`v1/workspaces/${checked.id}`, 'GET', checked.key));
+    if (result.id !== checked.id) throw new SyncApiError(502, 'WORKSPACE_MISMATCH'); return result;
+  }
+  async workspaceFolder(access: WorkspaceAccess, folder: z.infer<typeof WorkspaceFolderSchema>) {
+    return WorkspaceFolderSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/folders`, 'POST', access.key, WorkspaceFolderSchema.parse(folder)));
+  }
+  async workspaceCreateDrawing(access: WorkspaceAccess, input: z.infer<typeof WorkspaceCreateDrawingSchema>) {
+    const result = JoinedProjectSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/drawings`, 'POST', access.key, WorkspaceCreateDrawingSchema.parse(input)));
+    await this.verify(result.snapshot, input.id); if (result.credentials.projectId !== input.id) throw new SyncApiError(502, 'PROJECT_MISMATCH'); return result;
+  }
+  async workspaceDrawing(access: WorkspaceAccess, id: string) {
+    const result = JoinedProjectSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/drawings/${projectKey(id)}/access`, 'POST', access.key));
+    await this.verify(result.snapshot, id); if (result.credentials.projectId !== id) throw new SyncApiError(502, 'PROJECT_MISMATCH'); return result;
+  }
+  async workspaceAdopt(access: WorkspaceAccess, input: z.infer<typeof WorkspaceAdoptSchema>) {
+    const result = JoinedProjectSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/adopt`, 'POST', access.key, WorkspaceAdoptSchema.parse(input)));
+    await this.verify(result.snapshot, input.projectId); if (result.credentials.projectId !== input.projectId) throw new SyncApiError(502, 'PROJECT_MISMATCH'); return result;
+  }
 }

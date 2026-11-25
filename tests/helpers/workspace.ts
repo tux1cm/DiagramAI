@@ -1,0 +1,54 @@
+import { expect, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { ready } from './drawing';
+
+export async function openLibrary(page: Page) {
+  if (await page.getByRole('heading', { name: 'Quản lý dự án và bản vẽ', exact: true }).count()) return;
+  if (await page.getByRole('dialog').count()) await closeLibrary(page);
+  await page.getByTitle('Quản lý dự án', { exact: true }).click();
+}
+export async function closeLibrary(page: Page) {
+  if (await page.getByRole('dialog').count()) await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+}
+export async function renameDrawing(page: Page, title: string) {
+  await closeLibrary(page); await page.getByTitle('Đổi tên sơ đồ', { exact: true }).click();
+  const input = page.locator('.project-name input'); await input.fill(title); await input.press('Enter');
+  await expect(page.locator('.top-status')).toHaveText('Đã lưu trên máy');
+}
+export async function updateLibrary(page: Page) {
+  await openLibrary(page);
+  const button = page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true });
+  await expect(button).toBeEnabled({ timeout: 20000 }); await button.click();
+  await expect(page.getByTitle('Quản lý dự án', { exact: true })).toHaveAttribute('aria-busy', 'false', { timeout: 20000 });
+  await openLibrary(page); await expect(button).toBeEnabled({ timeout: 20000 });
+}
+export async function createWorkspace(page: Page, navigate = true) {
+  if (navigate) await page.goto('./'); await ready(page);
+  const title = `P5 fixture workspace ${randomUUID().slice(0, 8)}`;
+  await renameDrawing(page, title); await openLibrary(page);
+  await page.getByRole('button', { name: 'Tạo kho riêng và đưa bản vẽ trên máy vào kho', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
+  await page.getByRole('button', { name: 'Hiện link riêng của kho', exact: true }).click();
+  const field = page.getByRole('textbox', { name: 'Link truy cập riêng của kho', exact: true });
+  await expect(field).toBeVisible(); const link = await field.inputValue();
+  await page.getByRole('button', { name: 'Ẩn link riêng', exact: true }).click();
+  return { title, link };
+}
+export async function connectWorkspace(page: Page, link: string, viaFragment = true) {
+  const base = new URL(page.url() === 'about:blank' ? 'http://127.0.0.1:4173/p5-test/' : page.url());
+  if (viaFragment) {
+    const target = new URL(link); base.hash = target.hash; await page.goto(base.href); await ready(page);
+    await expect.poll(() => page.url().includes('dai_workspace_v1_')).toBe(false);
+    await openLibrary(page);
+    await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
+  } else {
+    await openLibrary(page); await page.getByRole('textbox', { name: 'Link riêng vào kho', exact: true }).fill(link);
+    await page.getByRole('button', { name: 'Mở kho bằng link riêng', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
+  }
+}
+export async function openWorkspaceDrawing(page: Page, title: string) {
+  await openLibrary(page);
+  await page.getByRole('button', { name: `Mở bản vẽ ${title}`, exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0); await expect(page.locator('.project-name')).toContainText(title);
+}

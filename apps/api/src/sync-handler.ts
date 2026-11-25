@@ -3,8 +3,9 @@ import { MAX_SYNC_BYTES } from '@diagramai/sync-core';
 import { SyncFault, type SyncService } from './sync-service';
 
 type Service = Pick<SyncService, 'rate' | 'create' | 'pull' | 'push' | 'pair' | 'redeem' | 'devices' | 'revoke' | 'recover' | 'revisions' | 'deleteProject'>;
+type WorkspaceService = Pick<SyncService, 'workspaceCreate' | 'workspaceCatalog' | 'workspaceFolder' | 'workspaceDrawingCreate' | 'workspaceDrawingAccess' | 'workspaceAdopt' | 'workspaceDelete'>;
 export interface SyncHandlerOptions {
-  service?: Service;
+  service?: Service & Partial<WorkspaceService>;
   allowedOrigins: readonly string[];
   enabled: boolean;
   // Only configure after verifying which header Neon overwrites at the edge.
@@ -49,6 +50,29 @@ export function createSyncHandler(options: SyncHandlerOptions) {
     const service = options.service, enabled = options.enabled && Boolean(service);
     if (path === '/v1/sync/status' && method === 'GET') return reply({ enabled, protocolVersion: 1 });
     if (!enabled || !service) return reply({ error: 'SYNC_DISABLED' }, 503);
+    if (path === '/v1/workspaces' || path.startsWith('/v1/workspaces/')) {
+      try {
+        if (url.search) throw new SyncFault(400, 'QUERY_NOT_ALLOWED');
+        const workspace = path.match(/^\/v1\/workspaces\/([^/]+)(?:\/(folders|drawings|adopt)(?:\/([^/]+)\/access)?)?$/);
+        const key = request.headers.get('Authorization')?.match(/^Bearer (dai_workspace_v1_[A-Za-z0-9_-]{43})$/)?.[1];
+        const creating = path === '/v1/workspaces' && method === 'POST';
+        await service.rate(creating ? 'workspace-create' : method === 'GET' ? 'workspace-list' : 'workspace-write', options.clientAddress?.(request) ?? null, key);
+        if (creating && service.workspaceCreate) return reply(await service.workspaceCreate(await jsonBody(request)), 201);
+        if (!workspace) throw new SyncFault(404, 'NOT_FOUND');
+        if (!key) throw new SyncFault(401, 'ACCESS_DENIED');
+        const id = z.uuid().parse(workspace[1]);
+        if (!workspace[2] && method === 'DELETE' && service.workspaceDelete) { await service.workspaceDelete(id, key); return new Response(null, { status: 204, headers }); }
+        if (!workspace[2] && method === 'GET' && service.workspaceCatalog) return reply(await service.workspaceCatalog(id, key));
+        if (method === 'POST' && workspace[2] === 'folders' && !workspace[3] && service.workspaceFolder) return reply(await service.workspaceFolder(id, key, await jsonBody(request)));
+        if (method === 'POST' && workspace[2] === 'drawings' && !workspace[3] && service.workspaceDrawingCreate) return reply(await service.workspaceDrawingCreate(id, key, await jsonBody(request)), 201);
+        if (method === 'POST' && workspace[2] === 'drawings' && workspace[3] && service.workspaceDrawingAccess) return reply(await service.workspaceDrawingAccess(id, key, z.uuid().parse(workspace[3])));
+        if (method === 'POST' && workspace[2] === 'adopt' && !workspace[3] && service.workspaceAdopt) return reply(await service.workspaceAdopt(id, key, await jsonBody(request)));
+        throw new SyncFault(404, 'NOT_FOUND');
+      } catch (error) {
+        if (error instanceof SyncFault) { if (error.status === 429) headers.set('Retry-After', '60'); return reply({ error: error.code }, error.status); }
+        return reply({ error: error instanceof z.ZodError ? 'INVALID_REQUEST' : 'SYNC_UNAVAILABLE' }, error instanceof z.ZodError ? 400 : 503);
+      }
+    }
     const match = path.match(/^\/v1\/projects\/([^/]+)(?:\/(snapshot|pairing-codes|devices|recover|revisions)(?:\/([^/]+))?)?$/);
     const route = method === 'POST' && path === '/v1/projects' ? 'create'
       : method === 'POST' && path === '/v1/pairing/redeem' ? 'redeem'

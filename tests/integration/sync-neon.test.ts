@@ -140,11 +140,12 @@ suite('P5 real Postgres transactions on isolated Neon branch', () => {
     const a = await create(), db = await pool.connect();
     try {
       await db.query('BEGIN');
+      await db.query(await readFile(new URL('../../apps/api/migrations/003_workspaces.down.sql', import.meta.url), 'utf8'));
       await db.query(await readFile(new URL('../../apps/api/migrations/002_project_count.down.sql', import.meta.url), 'utf8'));
       await db.query(await readFile(new URL('../../apps/api/migrations/001_sync.down.sql', import.meta.url), 'utf8'));
       expect((await db.query("SELECT to_regclass('diagramai_sync.projects') AS relation")).rows[0].relation).toBeNull();
     } finally { await db.query('ROLLBACK'); db.release(); }
     expect((await service.pull(a.credentials.projectId, a.credentials.token)).document).toEqual(a.request.document);
-    expect((await pool.query('SELECT version FROM diagramai_sync.schema_migrations ORDER BY version')).rows.map((row) => row.version)).toEqual([1, 2]);
+    expect((await pool.query('SELECT version FROM diagramai_sync.schema_migrations ORDER BY version')).rows.map((row) => row.version)).toEqual([1, 2, 3]);
   });
 });

@@ -1,3 +1,4 @@
 export * from './protocol';
 export * from './client';
 export * from './coordinator';
+export * from './workspace';

@@ -12,13 +12,14 @@ const decrypted = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', 
 if (decrypted.status !== 0) throw new Error('Cannot decrypt backup for this Windows user; no plaintext output.');
 const bytes = Buffer.from(decrypted.stdout.trim(), 'base64'), backup = JSON.parse(bytes.toString('utf8'));
 if (backup.format !== 'diagramai-sync-admin-backup-v1' || backup.project !== project) throw new Error('Wrong backup format/project.');
-const migrations = ['001_sync.up.sql', '002_project_count.up.sql'];
+const migrations = ['001_sync.up.sql', '002_project_count.up.sql', '003_workspaces.up.sql'].filter((name) => name in backup.migrations);
+if (migrations.length < 2 || Object.keys(backup.migrations).length !== migrations.length) throw new Error('Unknown or incomplete backup migrations.');
 for (const file of migrations) {
   const trusted = await readFile(new URL(`../apps/api/migrations/${file}`, import.meta.url), 'utf8');
   if (trusted !== backup.migrations[file]) throw new Error('Backup migration differs from trusted source; no SQL executed.');
 }
 const schema = `p5_backup_verify_${randomUUID().replaceAll('-', '')}`;
-const tables = ['schema_migrations', 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget'];
+const tables = ['schema_migrations', ...(migrations.length === 3 ? ['workspaces', 'workspace_folders'] : []), 'projects', 'project_devices', 'project_recovery', 'project_revisions', 'sync_operations', 'pairing_codes', 'rate_limit_buckets', 'storage_budget', ...(migrations.length === 3 ? ['workspace_drawings'] : [])];
 const pool = new Pool({ connectionString, max: 1, connectionTimeoutMillis: 15000, statement_timeout: 30000 });
 try {
   const db = await pool.connect();

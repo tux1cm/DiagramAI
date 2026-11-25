@@ -1,6 +1,6 @@
 # DiagramAI
 
-P4 đã được chủ dự án chốt. P5 thêm đồng bộ riêng tư Web ↔ Desktop không đăng nhập, đang xác minh bản phát hành — **chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ/bằng chứng: [`docs/p5-status.md`](docs/p5-status.md); hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md). Lịch sử P4: [`docs/p4-status.md`](docs/p4-status.md).
+P4 đã được chủ dự án chốt. P5 đang điều chỉnh thành **một kho riêng chung Web/Desktop: Dự án → Bản vẽ, vào bằng link riêng, không ghép từng bản** — **chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ mới: [`docs/p5-workspace-status.md`](docs/p5-workspace-status.md); lịch sử per-diagram: [`docs/p5-status.md`](docs/p5-status.md). Hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md).
 
 ## Chạy Web trên Windows
 
@@ -13,7 +13,7 @@ npm run dev
 
 Mở http://127.0.0.1:5173. Mặc định vào **editor React thật, không iframe, không login**. Thêm/kéo hình từ palette, kéo góc để resize, nhấp đúp hình/nhãn cạnh để sửa chữ, kéo neo để nối. Kéo hình rời lên cạnh sáng tím để chèn A→C→B, một Ctrl+Z hoàn tác cả lần chèn. Ctrl+kéo thân nhân đôi; Ctrl+kéo góc giữ tỷ lệ quanh tâm. Có snap/guideline, nhóm/căn chỉnh, clipboard và Undo/Redo.
 
-Tự lưu thay đổi đã commit vào IndexedDB (Web) / SQLite (Desktop); chỉ **Đã lưu trên máy** sau ghi thành công. Nút **Sơ đồ** quản lý nhiều bản vẽ và 20 checkpoint; **Ctrl+S** lưu `.diagramai`, **Ctrl+Shift+S** lưu thành file mới. Hỗ trợ SVG/PNG/PDF tiếng Việt. File ngoài ổ đĩa không bị autosave ghi đè. Web production có PWA offline sau khi cache hoàn tất; dev server không cài service worker. Xóa site/app data hoặc private session có thể mất kho local: **hãy xuất `.diagramai` dự phòng**. Cloud là tùy chọn từng dự án: bật trên máy nguồn, sao lưu mã khôi phục riêng tư rồi ghép máy đích bằng mã một lần. Hai kho local vẫn độc lập; chỉ báo **Đã đồng bộ** sau server ACK và ghi local thành công.
+Tự lưu thay đổi đã commit vào IndexedDB (Web) / SQLite (Desktop); chỉ **Đã lưu trên máy** sau ghi thành công. **Quản lý** chứa Dự án → Bản vẽ và đường vào File/local/checkpoint. **Ctrl+S** lưu `.diagramai`, **Ctrl+Shift+S** lưu thành file mới; hỗ trợ SVG/PNG/PDF tiếng Việt. File ngoài ổ đĩa không bị autosave ghi đè. Kho chung vào bằng **link riêng**, không ghép từng bản; tạo mới ở bên nào cũng được phát hiện bên kia. Web có PWA offline sau khi cache hoàn tất; hãy xuất `.diagramai` và giữ link kho trước khi xóa site/app data. Chỉ báo **Đã đồng bộ** sau server ACK và ghi local thành công.
 
 Hướng dẫn lưu, dự phòng, xử lý lỗi/xung đột: [`docs/p4-usage.md`](docs/p4-usage.md).
 

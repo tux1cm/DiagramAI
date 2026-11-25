@@ -1,24 +1,33 @@
 import { test, expect } from '@playwright/test';
-import { SyncClient } from '@diagramai/sync-core';
-import { createCloudProject, joinCloudProject, editCloudNode, syncNow, closeCloud } from '../helpers/cloud';
-import { nodeModel } from '../helpers/drawing';
+import { SyncClient, type WorkspaceAccess } from '@diagramai/sync-core';
+import { editCloudNode, syncNow, closeCloud } from '../helpers/cloud';
+import { createWorkspace, connectWorkspace, openWorkspaceDrawing, openLibrary, updateLibrary, closeLibrary } from '../helpers/workspace';
+import { nodeModel, ready } from '../helpers/drawing';
 
-test('Web CSP/CORS → managed Neon Function → second Web and back', async ({ page, browser, baseURL }) => {
+test('private workspace catalog and drawings via Web CSP/CORS → managed Neon Function → second Web and back', async ({ page, browser, baseURL }) => {
   const api = process.env.DIAGRAMAI_MANAGED_TEST_API!;
   const context = await browser.newContext({ baseURL }), target = await context.newPage();
-  let credential: { projectId: string; token: string } | undefined;
-  page.on('response', async (response) => {
-    if (response.url() === `${api}v1/projects` && response.request().method() === 'POST' && response.ok()) credential = (await response.json()).credentials;
+  let access: WorkspaceAccess | undefined;
+  page.on('request', (request) => {
+    if (request.url() === `${api}v1/workspaces` && request.method() === 'POST') access = request.postDataJSON();
   });
   try {
-    const created = await createCloudProject(page);
-    await joinCloudProject(target, created.code);
+    const created = await createWorkspace(page);
+    await target.goto('./'); await ready(target); await connectWorkspace(target, created.link); await openWorkspaceDrawing(target, created.title);
     await editCloudNode(page, 'Tiếp nhận vật tư', 'Managed đi'); await syncNow(page);
     await syncNow(target); await closeCloud(target); await expect(nodeModel(target, 'Managed đi')).toBeVisible();
     await editCloudNode(target, 'Managed đi', 'Managed về'); await syncNow(target);
     await syncNow(page); await closeCloud(page); await expect(nodeModel(page, 'Managed về')).toBeVisible();
+    await openLibrary(target); await target.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Dự án managed');
+    await target.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
+    await expect(target.getByRole('button', { name: 'Dự án managed', exact: true })).toBeVisible();
+    await target.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture managed mới');
+    await target.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click();
+    await expect(target.locator('.project-name')).toContainText('Dự án managed / P5 fixture managed mới');
+    await updateLibrary(target); await updateLibrary(page); await page.getByRole('button', { name: 'Dự án managed', exact: true }).click();
+    await openWorkspaceDrawing(page, 'P5 fixture managed mới'); await closeLibrary(page);
   } finally {
     await context.close();
-    if (credential) await new SyncClient(api).deleteProject(credential.projectId, credential.token);
+    if (access) await new SyncClient(api).deleteWorkspace(access);
   }
 });

@@ -18,7 +18,7 @@ Copy-Item 'apps/web/dist/*' 'File/Web' -Recurse
 $exe = Get-Item 'File/Desktop_Light/DiagramAI_Setup_x64.exe'
 @{
     version = '0.0.0'
-    phase = 'P5 local and cloud sync - not v1.0'
+    phase = 'P5 private workspace sync - not v1.0'
     testBuild = ($env:DIAGRAMAI_TEST_BUILD -eq '1')
     builtAt = [DateTime]::UtcNow.ToString('o')
     installer = $exe.Name
@@ -31,8 +31,9 @@ Run DiagramAI_Setup_x64.exe to install for the current Windows user.
 Requires WebView2. This light installer downloads the bootstrapper only if needed.
 Committed changes autosave locally in SQLite. Only "Da luu tren may" confirms a successful local write.
 Export .diagramai backups before clearing app/browser data; external files are saved only on request.
-Web and Desktop local storage remain separate. Enable Cloud for a project and pair devices with a one-time code to sync.
-Back up the private recovery key. Only an acknowledged server revision counts as synchronized.
+Web and Desktop use one private workspace catalog: Projects > Drawings. Open Management to create a workspace or paste its private link once.
+Back up the private workspace link; anyone holding it can access the whole workspace. No per-drawing pairing is needed.
+Only an acknowledged server revision counts as synchronized.
 Conflicts preserve local copies; AI is NOT implemented.
 Uninstall using Windows Settings > Apps > Installed apps > DiagramAI.
 '@ | Set-Content 'File/Desktop_Light/README_Install.txt' -Encoding UTF8

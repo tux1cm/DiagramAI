@@ -1,5 +1,7 @@
 # P5 — Đồng bộ Web ↔ Desktop không đăng nhập
 
+> **Đã chốt điều chỉnh sang một kho chung, Dự án → Bản vẽ và link riêng**, thay onboarding ghép từng sơ đồ. Tiến độ bản mới: [`p5-workspace-status.md`](p5-workspace-status.md). Nội dung dưới đây giữ bằng chứng bản P5 per-diagram trước điều chỉnh.
+
 Trạng thái: **P5 đã triển khai, bật production/Pages và đạt kiểm thử tập trung; chờ chủ dự án nghiệm thu**. P4 đã được chốt. Không làm AI/P6 trong bước này.
 
 ## Phạm vi và cách kiểm thử đã chốt
