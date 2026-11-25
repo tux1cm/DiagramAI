@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-25",
+  "applicationCommit": "12a2654",
+  "pipelineCommit": "b74be62",
+  "unitBoundaryPassed": 35,
+  "webScenariosPassed": 5,
+  "ciRun": 45570229012,
+  "pagesRun": 45570245149,
+  "nativeProduction": { "passed": 1, "testSeconds": 44.3, "harnessSeconds": 52.1 },
+  "publicMainLinkEntry": { "passed": 1, "testSeconds": 2.4, "harnessSeconds": 5.2, "anonymousWorkspaceRequests": 0 },
+  "userCredentialsAutomaticallyChanged": false
+}
