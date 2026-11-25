@@ -22,8 +22,8 @@ describe('editable scoped share → durable P5 local boundary', () => {
     const catalog: ShareCatalog = { id: access.id, kind: 'drawing', targetId: assetId, folders: [{ id: newId(), title: 'Shared Project' }], drawings: [] };
     catalog.drawings.push({ id: assetId, folderId: catalog.folders[0].id, title: document.title, revision: 1 });
     const binding = { snapshot: { projectId: assetId, document, hash: await snapshotHash(document), revision: 1, updatedAt: new Date().toISOString() }, credentials: { projectId: assetId, deviceId: newId(), token: `dai_device_v1_${'e'.repeat(43)}`, scope: 'editor' as const } };
-    let offline = false;
-    const client = { async shareCatalog() { if (offline) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return catalog; }, async shareDrawing() { return binding; }, async pull() { if (offline) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return null; } } as unknown as SyncClient;
+    let offline = false, catalogCalls = 0;
+    const client = { async shareCatalog() { catalogCalls++; if (offline) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return catalog; }, async shareDrawing() { return binding; }, async pull() { if (offline) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return null; } } as unknown as SyncClient;
     const make = (current: ProjectSession) => {
       const journal = new LocalSyncJournal(current.repository), coordinator = new SyncCoordinator(journal, client, () => current.flush(), () => true);
       return new SharedLibrary(current, client, (id, force) => coordinator.synchronize(id, force));
@@ -37,7 +37,9 @@ describe('editable scoped share → durable P5 local boundary', () => {
     expect(JSON.stringify(await repo.revisions(sharedId)).includes(access.key)).toBe(false);
     await new WorkspaceJournal(repo).update((state) => state); session.dispose(); offline = true;
     const reopened = new IndexedDbRepository('share-local', factory), restarted = new ProjectSession(reopened, () => createDocument());
+    const callsBeforeRestart = catalogCalls;
     const again = make(restarted); await again.connect(access.id);
+    expect(catalogCalls).toBe(callsBeforeRestart);
     expect(again.getSnapshot().mappings).toHaveLength(1); expect(restarted.getSnapshot().store.getSnapshot().document.title).toBe('Shared drawing');
     expect((await reopened.list()).length).toBe(2); restarted.dispose();
   });

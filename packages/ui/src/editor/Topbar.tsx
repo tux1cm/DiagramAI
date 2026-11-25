@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from './Icon';
 
-export function Topbar({ title, projectTitle, browseTitle, rename, open, status, cloudStatus, cloudBusy, save, openFile }: { title: string; projectTitle: string; browseTitle?: string; rename: (title: string) => void; open: (kind: 'cloud' | 'files' | 'export' | 'workspace') => void; status: string; cloudStatus: string; cloudBusy: boolean; save: () => void; openFile: () => void }) {
+export function Topbar({ title, projectTitle, browseTitle, rename, open, status, cloudStatus, cloudBusy, synchronize, save, openFile }: { title: string; projectTitle: string; browseTitle?: string; rename: (title: string) => void; open: (kind: 'cloud' | 'files' | 'export' | 'workspace') => void; status: string; cloudStatus: string; cloudBusy: boolean; synchronize: () => void; save: () => void; openFile: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   return <header className="topbar">
@@ -12,6 +12,7 @@ export function Topbar({ title, projectTitle, browseTitle, rename, open, status,
       <span className="top-status" role="status"><span className={`status-dot ${status === 'Đã lưu trên máy' ? '' : 'unsaved dirty'}`}/><span>{status}</span></span>
     </div>
     <div className="top-actions">
+      <button className="btn" disabled={cloudBusy} onClick={synchronize} title="Gửi và nhận mọi Project, bản vẽ trong kho">{cloudBusy ? 'Đang đồng bộ…' : 'Đồng bộ'}</button>
       <button className="chip cloud-chip" aria-busy={cloudBusy} onClick={() => open('cloud')} title="Trạng thái đồng bộ"><Icon name="cloud" size="sm"/> Cloud <span style={{ color: '#7785a0' }}>· {cloudStatus}</span></button>
       <button className="chip" onClick={() => open('workspace')}>Kho</button>
       <button className="btn hide-small" onClick={openFile}><Icon name="upload" size="sm"/><span className="label-action">Mở file</span></button>

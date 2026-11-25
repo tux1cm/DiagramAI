@@ -29,6 +29,21 @@ export class SharedLibrary {
     this.publish({ active: true, busy: true, view: 'drawings', catalog: null, mappings: [] });
     const stored = key ?? await this.session.repository.syncCredential(id);
     const access = { id, key: ShareKeySchema.parse(stored) };
+    const cached = !key ? await this.session.repository.shareCatalogRead(id) : null;
+    if (cached) {
+      const journal = new LocalSyncJournal(this.session.repository), mappings: SharedSnapshot['mappings'] = [];
+      for (const record of await this.session.repository.list()) {
+        const link = await journal.link(record.documentId);
+        if (link && cached.drawings.some((item) => item.id === link.projectId)) mappings.push({ cloudId: link.projectId, localId: record.documentId });
+      }
+      this.access = access;
+      await this.session.repository.shareContextWrite(id);
+      this.publish({ catalog: cached, mappings, busy: false });
+      const active = this.session.getSnapshot().store.getSnapshot().document.documentId;
+      if (mappings.some((item) => item.localId === active)) this.showEditor();
+      else if (cached.kind === 'drawing' && mappings[0]) await this.open(mappings[0].localId);
+      return;
+    }
     const catalog = await this.catalog(access);
     await this.session.repository.shareCredentialWrite(access);
     await this.session.repository.shareContextWrite(id);
@@ -55,7 +70,8 @@ export class SharedLibrary {
   private async sync(force: boolean) {
     if (!this.access) return;
     const access = this.access; this.publish({ busy: true });
-    const catalog = await this.catalog(access), journal = new LocalSyncJournal(this.session.repository);
+    const catalog = await this.api().shareCatalog(access), journal = new LocalSyncJournal(this.session.repository);
+    await this.session.repository.shareCatalogWrite(catalog);
     const mappings: SharedSnapshot['mappings'] = [];
     for (const drawing of catalog.drawings) {
       let localId: string | undefined;
@@ -77,11 +93,15 @@ export class SharedLibrary {
     if (this.access?.id !== access.id) return;
     this.publish({ catalog, mappings });
     const active = this.session.getSnapshot().store.getSnapshot().document.documentId;
+    const errors: unknown[] = [];
     for (const drawing of [...mappings].sort((a, b) => Number(a.localId === active) - Number(b.localId === active))) {
       if (this.access?.id !== access.id) return;
       const remote = catalog.drawings.find((item) => item.id === drawing.cloudId)!, link = await journal.link(drawing.localId);
-      if (force || drawing.localId === active || link?.pending || remote.revision !== link?.baseRevision) await this.syncOne(drawing.localId, force);
+      if (force || drawing.localId === active || link?.pending || remote.revision !== link?.baseRevision) {
+        try { await this.syncOne(drawing.localId, force); } catch (error) { errors.push(error); }
+      }
     }
     await this.session.refreshProjects();
+    if (errors.length) throw errors[0];
   }
 }

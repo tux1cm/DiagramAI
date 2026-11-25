@@ -30,7 +30,7 @@ export class WorkspaceLibrary {
     try { this.publish({ error: '' }); await work(); }
     catch (error) {
       const codes: Record<string, string> = { OWNER_REQUIRED: 'Bản vẽ P5 cũ cần được đưa vào kho từ thiết bị chủ dự án. Bản local và liên kết cũ được giữ nguyên.', CLOUD_PROJECT_LIMIT: 'Cloud đã đủ số bản vẽ của bản preview. Bản local vẫn được giữ.', CLOUD_STORAGE_LIMIT: 'Cloud đã chạm giới hạn dung lượng. Hãy xuất file dự phòng; bản local vẫn còn.', DRAWING_IN_OTHER_WORKSPACE: 'Bản vẽ này thuộc kho khác. Không tự chuyển quyền hoặc gộp dữ liệu.', FOLDER_CONFLICT: 'ID dự án không khớp dữ liệu đã có. Không tự ghi đè tên dự án.' };
-      const message = error instanceof SyncApiError ? codes[error.code] ?? (error.status === 401 ? 'Link kho không còn hợp lệ hoặc thiếu quyền. Bản local vẫn còn.' : error.status === 429 ? 'Kho đang giới hạn yêu cầu. Bản local vẫn còn; hãy chờ rồi đồng bộ lại.' : 'Chưa kết nối/ghi được Neon. Kho và bản vẽ local vẫn còn, sẽ thử lại khi có mạng.') : error instanceof Error ? error.message : 'Chưa hoàn tất thao tác kho.';
+      const message = error instanceof SyncApiError ? codes[error.code] ?? (error.status === 401 ? 'Link kho không còn hợp lệ hoặc thiếu quyền. Bản local vẫn còn.' : error.status === 429 ? 'Kho đang giới hạn yêu cầu. Bản local vẫn còn; hãy chờ rồi đồng bộ lại.' : 'Chưa kết nối/ghi được Neon. Kho và bản vẽ local vẫn còn; bấm Đồng bộ lại khi có mạng.') : error instanceof Error ? error.message : 'Chưa hoàn tất thao tác kho.';
       this.publish({ error: message });
     }
   }
@@ -86,7 +86,6 @@ export class WorkspaceLibrary {
     title = title.trim(); if (!title || title.length > 100) throw new Error('Tên dự án cần từ 1 đến 100 ký tự.');
     const id = newId(); await this.update((state) => ({ ...state, selectedFolderId: id, folders: [...state.folders, { id, title, pending: true }] }));
     this.publish({ view: 'drawings' });
-    await this.synchronize(true);
   }
   async enroll(localId: string, folderId?: string) {
     const link = await this.syncJournal.link(localId);
@@ -100,34 +99,37 @@ export class WorkspaceLibrary {
     await this.session.createProject(title.trim());
     await this.enroll(this.session.getSnapshot().store.getSnapshot().document.documentId, folderId);
     this.showEditor();
-    await this.synchronize(true);
   }
   async open(localId: string) { await this.session.openProject(localId); this.showEditor(); }
-  synchronize(force = false): Promise<void> {
-    if (this.running) return force ? this.running.then(() => this.synchronize(true), () => this.synchronize(true)) : this.running;
-    this.running = this.sync(force).finally(() => { this.running = null; this.publish({ busy: false }); });
+  synchronize(force = false, includeOwner = false): Promise<void> {
+    if (this.running) return force ? this.running.then(() => this.synchronize(true, includeOwner), () => this.synchronize(true, includeOwner)) : this.running;
+    this.running = this.sync(force, includeOwner).finally(() => { this.running = null; this.publish({ busy: false }); });
     return this.running;
   }
-  private async sync(force: boolean) {
-    if (await this.session.repository.shareContextRead()) return;
+  private async sync(force: boolean, includeOwner: boolean) {
+    if (!includeOwner && await this.session.repository.shareContextRead()) return;
+    await this.session.flush();
     let state = await this.reload(); if (!state) return;
     this.publish({ busy: true });
+    const errors: unknown[] = [];
     const access = await this.access(), api = this.api();
     if (state.provisionPending) { await api.createWorkspace(access); await this.update((current) => ({ ...current, provisionPending: false })); }
     state = (await this.reload())!;
     for (const folder of state.folders.filter((folder) => folder.pending)) {
+      try {
       await api.workspaceFolder(access, { id: folder.id, title: folder.title });
       await this.update((current) => ({ ...current, folders: current.folders.map((item) => item.id === folder.id ? { ...item, pending: false } : item) }));
+      } catch (error) { errors.push(error); }
     }
     state = (await this.reload())!;
-    if (await this.session.repository.shareContextRead()) return;
-    for (const record of await this.session.repository.list()) {
+    for (const record of await this.session.repository.shareContextRead() ? [] : await this.session.repository.list()) {
       // Existing local files on a newly joined device and preserved conflict
       // branches stay local. New drawings/imports/copies join the selected project.
       if (!state.ignoredLocalIds.includes(record.documentId) && !state.drawings.some((drawing) => drawing.localId === record.documentId) && !record.title.includes('(xung đột local)')) await this.enroll(record.documentId);
     }
     state = (await this.reload())!;
     for (const drawing of state.drawings.filter((drawing) => !drawing.published)) {
+      try {
       const record = await this.session.repository.load(drawing.localId); if (!record) continue;
       const link = await this.syncJournal.link(drawing.localId);
       if (link) {
@@ -140,10 +142,12 @@ export class WorkspaceLibrary {
         if (!await this.syncJournal.link(drawing.localId)) await this.syncJournal.bindExisting(drawing.localId, binding);
       }
       await this.update((current) => ({ ...current, drawings: current.drawings.map((item) => item.localId === drawing.localId ? { ...item, published: true } : item) }));
+      } catch (error) { errors.push(error); }
     }
     const catalog = await api.workspaceCatalog(access);
     await this.update((current) => ({ ...current, folders: [...catalog.folders.map((folder) => ({ ...folder, pending: false })), ...current.folders.filter((folder) => folder.pending && !catalog.folders.some((remote) => remote.id === folder.id))] }));
     for (const drawing of catalog.drawings) {
+      try {
       state = (await this.reload())!;
       if (state.drawings.some((item) => item.cloudId === drawing.id)) continue;
       let localId: string | undefined;
@@ -157,6 +161,7 @@ export class WorkspaceLibrary {
       }
       const found = localId;
       await this.update((current) => current.drawings.some((item) => item.cloudId === drawing.id) ? current : { ...current, drawings: [...current.drawings, { localId: found, cloudId: drawing.id, folderId: drawing.folderId, operationId: newId(), published: true }] });
+      } catch (error) { errors.push(error); }
     }
     state = (await this.reload())!;
     const active = this.session.getSnapshot().store.getSnapshot().document.documentId;
@@ -167,8 +172,12 @@ export class WorkspaceLibrary {
         const link = await this.syncJournal.link(drawing.localId);
         if (link && !link.pending && !link.conflict && link.baseRevision === remote.revision) continue;
       }
-      if (drawing.published && catalog.drawings.some((remote) => remote.id === drawing.cloudId) && await this.session.repository.load(drawing.localId)) await this.syncOne(drawing.localId, force);
+      if (drawing.published && catalog.drawings.some((remote) => remote.id === drawing.cloudId) && await this.session.repository.load(drawing.localId)) {
+        try { await this.syncOne(drawing.localId, force); } catch (error) { errors.push(error); }
+      }
     }
-    await this.session.refreshProjects(); await this.reload(); this.publish({ error: '' });
+    await this.session.refreshProjects(); await this.reload();
+    if (errors.length) throw errors[0];
+    this.publish({ error: '' });
   }
 }

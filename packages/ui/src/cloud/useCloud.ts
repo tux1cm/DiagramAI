@@ -52,7 +52,14 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     if (session.getSnapshot().store.getSnapshot().document.documentId === documentId) await session.flush();
   }, safe) : null, [client, storage, session, safe]);
   const syncState = useSyncExternalStore(coordinator?.subscribe ?? noopSubscribe, coordinator?.getSnapshot ?? readLocalState);
-  const synchronizeDocument = useCallback(async (documentId: string, force = false) => { await coordinator?.synchronize(documentId, force); }, [coordinator]);
+  const synchronizeDocument = useCallback(async (documentId: string, force = false) => {
+    if (!coordinator) throw new Error('Chưa cấu hình API đồng bộ.');
+    // Flush BEFORE canReceive: a manual click may arrive during the local save debounce.
+    if (session.getSnapshot().store.getSnapshot().document.documentId === documentId) await session.flush();
+    await coordinator.synchronize(documentId, force);
+    const result = coordinator.getSnapshot();
+    if (result.documentId !== documentId || !['synced', 'local'].includes(result.status)) throw new Error(result.message || 'Chưa đồng bộ xong; dữ liệu local vẫn còn.');
+  }, [coordinator, session]);
   const refresh = useCallback(async () => {
     const documentId = session.getSnapshot().store.getSnapshot().document.documentId;
     const current = await journal.link(documentId);
@@ -65,17 +72,6 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     void journal.link(id).then((current) => { if (active) setLink(current); }).catch(() => { if (active) setError('Không đọc được liên kết cloud local.'); });
     return () => { active = false; };
   }, [journal, id, local.version, local.status, syncState.revision, syncState.status]);
-  const linked = Boolean(link);
-  useEffect(() => {
-    if (!coordinator || !linked || local.status === 'loading') return;
-    const run = () => {
-      if (document.visibilityState === 'hidden' || !safe(id)) return;
-      void coordinator.synchronize(id).then(refresh).catch(() => setError('Chưa hoàn tất đồng bộ.'));
-    };
-    const first = setTimeout(run, 800), timer = setInterval(run, 15000);
-    window.addEventListener('focus', run); window.addEventListener('online', run);
-    return () => { clearTimeout(first); clearInterval(timer); window.removeEventListener('focus', run); window.removeEventListener('online', run); };
-  }, [coordinator, id, linked, local.version, local.status, refresh, safe]);
   const operation = async (work: () => Promise<void>) => {
     if (running.current) return; running.current = true; setBusy(true); setError('');
     try { await work(); await refresh(); }
@@ -117,7 +113,7 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     makeCode: () => operation(async () => { const current = await access(); setPairing({ projectId: current.link.projectId, ...await api().pairing(current.link.projectId, current.token) }); }),
     loadDevices: () => operation(async () => { const current = await access(), result = await api().devices(current.link.projectId, current.token); setDeviceList({ projectId: current.link.projectId, items: result }); }),
     revoke: (deviceId: string) => operation(async () => { const current = await access(); await api().revoke(current.link.projectId, current.token, deviceId); const result = await api().devices(current.link.projectId, current.token); setDeviceList({ projectId: current.link.projectId, items: result }); }),
-    syncNow: () => operation(async () => { await session.flush(); await coordinator?.synchronize(id, true); }),
+    syncNow: () => operation(async () => { await synchronizeDocument(id, true); }),
     useCloud: (openCopy: boolean) => operation(async () => {
       await session.flush(); const copy = await external(id, () => journal.useCloud(id));
       if (openCopy && copy) await session.openProject(copy); else await coordinator?.synchronize(id, true);

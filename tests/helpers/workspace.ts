@@ -22,7 +22,7 @@ export async function updateLibrary(page: Page) {
   if (!await page.locator('.workspace-surface').count()) await openLibrary(page);
   const button = page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true });
   await expect(button).toBeEnabled({ timeout: 20000 }); await button.click();
-  await expect(page.getByTitle('Quản lý dự án', { exact: true })).toHaveAttribute('aria-busy', 'false', { timeout: 20000 });
+  await expect(page.getByTitle('Trạng thái đồng bộ', { exact: true })).toHaveAttribute('aria-busy', 'false', { timeout: 20000 });
   await expect(button).toBeEnabled({ timeout: 20000 });
 }
 export async function createWorkspace(page: Page, navigate = true) {

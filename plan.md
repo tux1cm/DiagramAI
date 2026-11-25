@@ -865,6 +865,8 @@ Việc làm:
 
 **Làm rõ tiếp theo (2026-11-25):** bấm Kho hiện các **thẻ Project trong vùng giữa**, không popup; mở Project xem các thẻ bản vẽ rồi vào editor. Chia sẻ ngay trên thẻ: link Project xem/sửa các bản vẽ của Project đó; link bản vẽ chỉ xem/sửa một bản. Không tách quyền read-only/edit hoặc yêu cầu login. Quyền scope phải thực thi ở API, không chỉ ẩn UI. Link riêng toàn kho chỉ dùng cho thiết bị của chủ. Chi tiết: ADR 0008.
 
+**Điều chỉnh đồng bộ (2026-11-25):** cả Web/Desktop đều tạo Project và bản vẽ, đồng bộ hai chiều. Bỏ tự gửi/nhận cloud theo timer/focus/online và khi tạo Project/bản vẽ; nút Đồng bộ cập nhật toàn kho (catalog và nội dung). Local vẫn tự lưu. Desktop lưu local rồi thử đồng bộ hết trước khi thoát, lỗi thì hỏi và giữ hàng đợi. Web cảnh báo thay đổi chưa gửi khi đóng tab, không hứa hoàn tất network trong unload. Mở link mới/tạo kho/chia sẻ vẫn là thao tác cloud chủ động.
+
 1. Viết migrations Postgres + integration tests; tách branch dev/prod.
 2. Functions CRUD project private, CAS revision, idempotency/outbox.
 3. Tạo recovery secret + device token, hash token, ghép nối one-time code, revoke; rate limit anti brute-force.

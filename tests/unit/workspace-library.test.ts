@@ -4,6 +4,8 @@ import { createDocument, newId } from '@diagramai/diagram-core';
 import { IndexedDbRepository, LocalSyncJournal, ProjectSession } from '@diagramai/local-storage';
 import { SyncApiError, SyncCoordinator, type CloudSnapshot, type DeviceGrant, type PushSnapshot, type SyncClient, type WorkspaceCatalog } from '@diagramai/sync-core';
 import { WorkspaceLibrary } from '../../packages/ui/src/workspace/library';
+import { SharedLibrary } from '../../packages/ui/src/workspace/shared-library';
+import { hasPendingCloud, synchronizeAll } from '../../packages/ui/src/cloud/manual-sync';
 
 function fakeCloud() {
   const catalog: WorkspaceCatalog = { id: newId(), folders: [], drawings: [] };
@@ -42,6 +44,52 @@ async function local(api: SyncClient, factory = new IDBFactory(), name = newId()
   return { repo, session, library, factory, name };
 }
 describe('workspace catalog → P5 journal recovery boundary', () => {
+  it('creates Projects/drawings locally on BOTH platforms and exchanges them only on explicit full sync', async () => {
+    const cloud = fakeCloud(), web = await local(cloud.api); await web.library.create();
+    const desk = await local(cloud.api), state = (await web.repo.workspaceRead())!;
+    await desk.library.connect({ id: state.id, key: (await web.repo.syncCredential(state.id))! });
+    const before = cloud.creates();
+    await web.library.createFolder('Web Project'); await web.library.createDrawing('Web drawing');
+    await desk.library.createFolder('Desktop Project'); await desk.library.createDrawing('Desktop drawing');
+    expect(cloud.creates()).toBe(before);
+    expect(cloud.catalog.folders.map((item) => item.title)).not.toContain('Web Project');
+    expect(await hasPendingCloud(web.session)).toBe(true); expect(await hasPendingCloud(desk.session)).toBe(true);
+    await web.library.synchronize(true); await desk.library.synchronize(true); await web.library.synchronize(true);
+    for (const device of [web, desk]) {
+      expect((await device.repo.workspaceRead())!.folders.map((item) => item.title)).toEqual(expect.arrayContaining(['Web Project', 'Desktop Project']));
+      expect((await device.repo.list()).map((item) => item.title)).toEqual(expect.arrayContaining(['Web drawing', 'Desktop drawing']));
+      expect(await hasPendingCloud(device.session)).toBe(false);
+      device.session.dispose();
+    }
+  });
+  it('still discovers remote drawings when an unrelated local drawing fails to publish', async () => {
+    const cloud = fakeCloud(), web = await local(cloud.api); await web.library.create();
+    const desk = await local(cloud.api), state = (await web.repo.workspaceRead())!;
+    await desk.library.connect({ id: state.id, key: (await web.repo.syncCredential(state.id))! });
+    await web.library.createDrawing('New from Web'); await web.library.synchronize(true);
+    await desk.library.createDrawing('Blocked local drawing');
+    const create = cloud.api.workspaceCreateDrawing.bind(cloud.api);
+    cloud.api.workspaceCreateDrawing = async (access, input) => {
+      if (input.project.document.title === 'Blocked local drawing') throw new SyncApiError(409, 'CLOUD_PROJECT_LIMIT');
+      return create(access, input);
+    };
+    await expect(desk.library.synchronize(true)).rejects.toThrow();
+    expect((await desk.repo.list()).map((item) => item.title)).toContain('New from Web');
+    expect(await hasPendingCloud(desk.session)).toBe(true);
+    web.session.dispose(); desk.session.dispose();
+  });
+  it('exit/full-sync rejects unacknowledged work instead of reporting success, and retains the local queue', async () => {
+    const cloud = fakeCloud(), a = await local(cloud.api); await a.library.create();
+    await a.library.createDrawing('Needs ACK');
+    const shared = new SharedLibrary(a.session, cloud.api, async () => {});
+    cloud.unavailable(true);
+    await expect(synchronizeAll(a.session, a.library, shared, async () => {})).rejects.toThrow();
+    expect(await hasPendingCloud(a.session)).toBe(true);
+    expect((await a.repo.list()).map((item) => item.title)).toContain('Needs ACK');
+    cloud.unavailable(false);
+    await synchronizeAll(a.session, a.library, shared, async () => {});
+    expect(await hasPendingCloud(a.session)).toBe(false); a.session.dispose();
+  });
   it('persists the new workspace key/header before network create and resumes the same IDs after offline restart', async () => {
     const cloud = fakeCloud(), a = await local(cloud.api); cloud.unavailable(true);
     await a.library.perform(() => a.library.create());

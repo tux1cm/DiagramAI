@@ -14,7 +14,7 @@ function consume() {
   window.history.replaceState(null, '', `${window.location.pathname}#/share/${access.id}`);
   return access;
 }
-export function useShared(session: ProjectSession, local: ProjectSessionSnapshot, baseUrl: string, syncOne: (id: string, force?: boolean) => Promise<void>) {
+export function useShared(session: ProjectSession, _local: ProjectSessionSnapshot, baseUrl: string, syncOne: (id: string, force?: boolean) => Promise<void>) {
   const [ownerIntent] = useState(() => window.location.hash.startsWith('#/workspace/'));
   const [incoming, setIncoming] = useState(() => consume());
   const library = useMemo(() => {
@@ -28,14 +28,6 @@ export function useShared(session: ProjectSession, local: ProjectSessionSnapshot
     else if (ownerIntent) await session.repository.shareContextWrite(null);
     else { await session.initialize(); const id = await session.repository.shareContextRead(); if (id) await library.connect(id); }
   }); }, [library, incoming, session, ownerIntent]);
-  const revision = local.projects.map((item) => `${item.documentId}:${item.version}`).sort().join(',');
-  useEffect(() => {
-    if (!snapshot.active || local.status === 'loading') return;
-    const run = () => { if (document.visibilityState !== 'hidden') void library.perform(() => library.synchronize()); };
-    const first = setTimeout(run, 1000), timer = setInterval(run, 15000);
-    window.addEventListener('focus', run); window.addEventListener('online', run);
-    return () => { clearTimeout(first); clearInterval(timer); window.removeEventListener('focus', run); window.removeEventListener('online', run); };
-  }, [library, snapshot.active, local.status, revision]);
   return { library, ...snapshot, active: snapshot.active || Boolean(incoming && !incoming.invalid && !snapshot.catalog && snapshot.busy) };
 }
 export type SharedController = ReturnType<typeof useShared>;

@@ -54,7 +54,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_workspace_v1_'))).toBe(false);
     await desk.route(apiPattern, (route) => route.abort('internetdisconnected'));
     await editCloudNode(desk, 'Web về Desktop', 'Desktop offline sau restart');
-    await openCloud(desk); await desk.getByRole('button', { name: 'Đồng bộ ngay', exact: true }).click(); await expect(cloudButton(desk)).toContainText('Offline');
+    await openCloud(desk); await desk.getByRole('button', { name: 'Đồng bộ ngay', exact: true }).click(); await expect(cloudButton(desk)).toContainText('Chưa đồng bộ hết');
     await stop(); desk = await launch(); // new WebView profile, same SQLite + DPAPI vault
     await expect(nodeModel(desk, 'Desktop offline sau restart')).toBeVisible(); await syncNow(desk);
     await syncNow(web); await closeCloud(web); await expect(nodeModel(web, 'Desktop offline sau restart')).toBeVisible();
@@ -95,6 +95,21 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     for (const file of readdirSync(vault)) expect(readFileSync(join(vault, file)).includes(Buffer.from('dai_share_v1_'))).toBe(false);
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_share_v1_'))).toBe(false);
     await desk.screenshot({ path: testInfo.outputPath('desktop-scoped-project.png') });
+    await desk.getByRole('button', { name: 'Về kho của tôi', exact: true }).click();
+    await desk.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Project tạo trên Desktop');
+    await desk.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
+    await desk.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture Desktop gửi khi thoát');
+    await desk.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click(); await ready(desk);
+    await updateLibrary(web);
+    await expect(web.getByRole('button', { name: 'Project tạo trên Desktop', exact: true })).toHaveCount(0);
+    // Real native close request, not a process kill or a synthetic DOM event.
+    const closingApp = app!;
+    const closeRequest = spawn('powershell.exe', ['-NoProfile', '-Command', `(Get-Process -Id ${closingApp.pid}).CloseMainWindow()`], { stdio: 'ignore' });
+    await new Promise<void>((resolve, reject) => { closeRequest.once('error', reject); closeRequest.once('exit', (code) => code === 0 ? resolve() : reject(new Error('Native close request failed'))); });
+    await expect.poll(() => closingApp.exitCode, { timeout: 30000 }).not.toBeNull();
+    await updateLibrary(web);
+    await openWorkspaceDrawing(web, 'P5 fixture Desktop gửi khi thoát', 'Project tạo trên Desktop');
+    await expect(web.locator('.project-name')).toContainText('Project tạo trên Desktop / P5 fixture Desktop gửi khi thoát');
   } finally {
     await stop(); await webContext.close();
     if (managed && workspaceAccess) await new SyncClient(managed).deleteWorkspace(workspaceAccess);

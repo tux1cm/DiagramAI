@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Background, ReactFlow } from '@xyflow/react';
 import { checkHealth } from '@diagramai/shared';
 import '@xyflow/react/dist/style.css';
@@ -10,6 +10,7 @@ import { useCloud } from './cloud/useCloud';
 import { hasEditorDraft } from './editor/drafts';
 import { useWorkspace } from './workspace/useWorkspace';
 import { useShared } from './workspace/useShared';
+import { useManualSync } from './cloud/useManualSync';
 
 const nodes = [
   { id: 'p0-a', position: { x: 0, y: 0 }, data: { label: 'React Flow v12' } },
@@ -22,7 +23,10 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
   const local = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const cloud = useCloud(session, local, apiBaseUrl);
   const shared = useShared(session, local, apiBaseUrl, cloud.synchronizeDocument);
-  const workspace = useWorkspace(session, local, apiBaseUrl, cloud.synchronizeDocument, shared.active);
+  const workspace = useWorkspace(session, local, apiBaseUrl, cloud.synchronizeDocument);
+  const manual = useManualSync(session, local, workspace, shared, cloud.synchronizeDocument);
+  const manualRef = useRef(manual);
+  useEffect(() => { manualRef.current = manual; }, [manual]);
   const [route, setRoute] = useState(window.location.hash);
   const [health, setHealth] = useState('Chưa kiểm tra');
   const [busy, setBusy] = useState(false);
@@ -34,21 +38,28 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
   useEffect(() => {
     void session.initialize();
     const hasDraft = hasEditorDraft;
-    const warn = (event: BeforeUnloadEvent) => { if (session.hasUnsaved() || session.getSnapshot().status === 'saving' || hasDraft()) { event.preventDefault(); event.returnValue = ''; } };
+    const warn = (event: BeforeUnloadEvent) => { if (session.hasUnsaved() || session.getSnapshot().status === 'saving' || hasDraft() || manualRef.current.pendingRef.current || manualRef.current.busy) { event.preventDefault(); event.returnValue = ''; } };
     const flush = () => { if (!hasDraft()) void session.flush().catch(() => {}); };
     window.addEventListener('beforeunload', warn);
     window.addEventListener('pagehide', flush);
     let disposed = false, unlisten: (() => void) | undefined;
     if (isTauri()) void import('@tauri-apps/api/window').then(async ({ getCurrentWindow }) => {
       const win = getCurrentWindow();
+      let closing = false;
       const stop = await win.onCloseRequested(async (event) => {
         event.preventDefault();
+        if (closing) return; closing = true;
         const active = document.activeElement; if (active instanceof HTMLElement) active.blur();
-        try { await session.initialize(); await session.flush(); await win.destroy(); }
+        const root = document.querySelector<HTMLElement>('.editor-root'), wasInert = root?.inert ?? false;
+        if (root) root.inert = true;
+        try { await session.initialize(); await session.flush(); await manualRef.current.synchronize(); await win.destroy(); }
         catch {
           const { confirm } = await import('@tauri-apps/plugin-dialog');
-          if (await confirm('Chưa lưu được bản vẽ trên máy. Đóng và bỏ thay đổi chưa lưu? Nên hủy để xuất file dự phòng.', { title: 'DiagramAI · Chưa lưu', kind: 'warning' })) await win.destroy();
+          if (!session.hasUnsaved() && session.getSnapshot().status === 'saved' && !hasDraft()) {
+            if (await confirm('Chưa đồng bộ hết lên cloud (mất mạng, thiếu quyền hoặc xung đột). Bản local đã lưu và hàng đợi vẫn được giữ. Thoát mà chưa đồng bộ?', { title: 'DiagramAI · Chưa đồng bộ', kind: 'warning' })) await win.destroy();
+          } else if (await confirm('Chưa lưu được bản vẽ trên máy. Đóng và bỏ thay đổi chưa lưu? Nên hủy để xuất file dự phòng.', { title: 'DiagramAI · Chưa lưu', kind: 'warning' })) await win.destroy();
         }
+        finally { closing = false; if (root) root.inert = wasInert; }
       });
       if (disposed) stop(); else unlisten = stop;
     });
@@ -66,7 +77,7 @@ export function AppShell({ basePath, apiBaseUrl }: { basePath: string; apiBaseUr
       setBusy(false);
     }
   }
-  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <div className="editor-root" inert={session.isExternalUpdating()}><EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath} cloud={cloud} workspace={workspace} shared={shared}/></div>;
+  if (route !== '#/spike') return local.status === 'loading' ? <main className="spike-page" role="status">Đang mở dữ liệu trên máy…</main> : <div className="editor-root" inert={session.isExternalUpdating()}><EditorShell key={local.epoch} store={local.store} session={session} local={local} basePath={basePath} cloud={cloud} workspace={workspace} shared={shared} manual={manual}/></div>;
   return (
     <main className="spike-page">
       <h1>DiagramAI · P0</h1>

@@ -1,5 +1,13 @@
 # P5 — Kho riêng chung Web ↔ Desktop
 
+## Đồng bộ thủ công hai chiều (điều chỉnh 2026-11-25)
+
+- Cả Web và Desktop tạo được Project/bản vẽ trong cùng kho. Tạo/sửa ở máy A → **Đồng bộ** để gửi → máy B bấm **Đồng bộ** để nhận. Nút này xử lý danh sách Project, bản vẽ mới và nội dung toàn kho, không chỉ bản đang mở. **Cập nhật kho ngay** và **Đồng bộ ngay** dùng cùng luồng.
+- Tự lưu local vẫn bật. Không tự gửi/nhận cloud theo từng lần sửa, bộ hẹn giờ 15 giây, focus hay online. Project/bản vẽ mới giữ cờ chờ gửi cho đến khi có ACK; một lần gửi lỗi không chặn nhận các bản khác.
+- Desktop: bấm đóng cửa sổ sẽ lưu local, thử đồng bộ hết rồi thoát. Nếu mất mạng/thiếu quyền/xung đột, app hỏi có thoát khi chưa đồng bộ hay không; không xóa hàng đợi. Nếu local chưa lưu được có cảnh báo riêng.
+- Web: bấm Đồng bộ trước khi đóng tab. Trình duyệt không bảo đảm chờ request async lúc đóng; app cảnh báo khi còn thay đổi chưa gửi. Không tuyên bố đã đồng bộ chỉ vì tab đóng. Dữ liệu của cửa sổ ẩn danh có thể mất khi đóng toàn bộ cửa sổ ẩn danh, kể cả bản local đã lưu.
+- Mở link mới, tạo kho và Chia sẻ là thao tác cloud chủ động. Mở lại kho/share đã nhớ chỉ đọc cache local; muốn cập nhật cloud bấm Đồng bộ. Không đổi phạm vi quyền link.
+
 ## Kho và chia sẻ Project/bản vẽ
 
 - Bấm **Kho** ở rail trái hoặc thanh trên: vùng giữa hiện các thẻ Project, không popup. Mở Project để thấy các thẻ bản vẽ; mở bản vẽ để vào editor. Thanh trên hiện **Project / Tên bản vẽ**.
@@ -14,8 +22,8 @@
 1. Mở **Quản lý** (nút ở rail trái hoặc thanh trên). Trên máy có bản vẽ muốn dùng làm nguồn, chọn **Tạo kho riêng và đưa bản vẽ trên máy vào kho**. Các bản hiện có vào **Dự án đầu tiên**, không gộp theo tên.
 2. Chọn **Hiện link riêng của kho**, sao lưu toàn bộ link vào nơi riêng tư. **Ai có link có quyền truy cập toàn bộ kho**; không gửi link vào chat hoặc đăng công khai. Link không chứa mật khẩu Neon.
 3. Trên Web, mở link đó; trên Desktop, dán link vào **Quản lý → Đã có kho? Dán link riêng → Mở kho bằng link riêng**. Chỉ làm lần đầu, thiết bị/trình duyệt sẽ nhớ kho. Không ghép mã cho từng bản vẽ.
-4. Trong Quản lý, chọn **Dự án → Bản vẽ → Mở**. Thanh trên hiện **Tên dự án / Tên bản vẽ**. Sửa như bình thường; local và cloud tự lưu, chỉ báo **Đã đồng bộ** sau server ACK.
-5. Tạo dự án/bản vẽ mới ở bên nào cũng tự xuất hiện bên kia khi có mạng (poll khoảng 15 giây khi app đang mở; có nút **Cập nhật kho ngay**).
+4. Trong Kho, chọn **Project → Bản vẽ → Mở**. Thanh trên hiện **Tên Project / Tên bản vẽ**. Sửa như bình thường; local tự lưu, cloud chỉ gửi/nhận khi bấm **Đồng bộ** hoặc Desktop thoát có kiểm soát.
+5. Tạo Project/bản vẽ mới ở bên nào cũng được: bấm **Đồng bộ** bên nguồn để gửi, rồi bên nhận để cập nhật. Không còn poll tự động.
 
 ### Dữ liệu cũ và offline
 
@@ -41,7 +49,7 @@ Phần dưới giữ hướng dẫn tương thích dữ liệu P5 cũ; không ph
 1. Trên máy nguồn, mở sơ đồ → **Cloud** → đồng ý tải nội dung lên → **Bật đồng bộ cho dự án này**.
 2. Sao chép **toàn bộ mã khôi phục** vào trình quản lý mật khẩu/nơi riêng tư, rồi xác nhận đã sao lưu. Mã chỉ hiện một lần, không có trong `.diagramai`.
 3. Chọn **Tạo mã liên kết**. Trên máy đích, mở Cloud, nhập mã một lần và bấm **Liên kết dự án**. Không cần tài khoản; máy đích có sơ đồ local mới, không đè sơ đồ đang mở.
-4. Sửa ở Desktop, chờ **Đã lưu trên máy** và **Đã đồng bộ**; sang Web bấm **Đồng bộ ngay**. Có thể sửa tiếp và đồng bộ ngược về Desktop.
+4. Sửa ở Desktop, chờ **Đã lưu trên máy** rồi bấm **Đồng bộ**; sang Web bấm **Đồng bộ** để nhận. Có thể sửa tiếp và đồng bộ ngược về Desktop.
 
 ## Ý nghĩa trạng thái
 
@@ -50,7 +58,7 @@ Phần dưới giữ hướng dẫn tương thích dữ liệu P5 cũ; không ph
 - **Đã đồng bộ**: server đã xác nhận revision và acknowledgement đã được ghi local.
 - **Xung đột**: không tự ghép/ghi đè. Cloud lưu remote snapshot và tạo bản local riêng trước khi báo lỗi. Có thể xuất cả hai, chọn cloud và giữ local riêng, hoặc mở nhánh local thành dự án khác.
 
-App kiểm tra cloud khoảng 15 giây khi đang mở/visible, khi focus hoặc có mạng lại. Không phải cộng tác realtime; chưa có AI/P6.
+App không kiểm tra cloud theo timer/focus/online. Trạng thái lần đồng bộ gần nhất không có nghĩa đã nhận những chỉnh sửa mới trên thiết bị khác; bấm Đồng bộ để cập nhật. Không phải cộng tác realtime; chưa có AI/P6.
 
 ## Quyền và dự phòng
 

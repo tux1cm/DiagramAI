@@ -34,7 +34,7 @@ test('one private workspace discovers projects and drawings both ways, preserves
   } finally { await context.close(); }
 });
 
-test('workspace offline edits and new drawings survive reload, resume automatically, and conflicts preserve both branches', async ({ page, browser, baseURL }) => {
+test('workspace offline edits and new drawings survive reload, resume on explicit sync, and conflicts preserve both branches', async ({ page, browser, baseURL }) => {
   const source = await createWorkspace(page), context = await browser.newContext({ baseURL }), target = await context.newPage();
   try {
     await target.goto('./'); await ready(target); await connectWorkspace(target, source.link); await openWorkspaceDrawing(target, source.title);

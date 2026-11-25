@@ -3,9 +3,10 @@ import type { DiagramDocument } from '@diagramai/diagram-core';
 import type { CloudController } from './useCloud';
 import { chooseSaveTarget, diagramBlob, suggestedName } from '../files/file-port';
 import { fileResultMessage } from '../files/useFileActions';
+import type { ManualSyncController } from './useManualSync';
 
 export const CLOUD_LABELS = { local: 'Chưa liên kết', pending: 'Chờ đồng bộ', syncing: 'Đang đồng bộ…', synced: 'Đã đồng bộ', offline: 'Offline · Chờ đồng bộ', conflict: 'Xung đột', revoked: 'Quyền không hợp lệ', error: 'Lỗi đồng bộ' };
-export function CloudPanel({ cloud, document, notice, saveLocal, workspaceMode = false }: { cloud: CloudController; document: DiagramDocument; notice: (message: string) => void; saveLocal: () => void; workspaceMode?: boolean }) {
+export function CloudPanel({ cloud, manual, document, notice, saveLocal, workspaceMode = false }: { cloud: CloudController; manual?: ManualSyncController; document: DiagramDocument; notice: (message: string) => void; saveLocal: () => void; workspaceMode?: boolean }) {
   const [code, setCode] = useState(''), [recoveryText, setRecoveryText] = useState(''), [consent, setConsent] = useState(false);
   const [revoke, setRevoke] = useState<string | null>(null), [unlinking, setUnlinking] = useState(false);
   const [deleting, setDeleting] = useState(false), [deleteConfirmed, setDeleteConfirmed] = useState(false);
@@ -32,9 +33,9 @@ export function CloudPanel({ cloud, document, notice, saveLocal, workspaceMode =
       <label className="export-checkbox"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)}/>Tôi đồng ý tải nội dung sơ đồ này lên cloud và sẽ sao lưu mã khôi phục.</label>
       <button className="btn primary" disabled={cloud.busy || !consent} onClick={() => void cloud.create()}>Bật đồng bộ cho dự án này</button>
     </section> : <section>
-      <h4>{cloud.link.conflict ? 'Xung đột' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]}</h4>
+      <h4>{cloud.link.conflict ? 'Xung đột' : cloud.link.pending ? 'Chờ đồng bộ' : CLOUD_LABELS[cloud.state.status === 'local' ? 'pending' : cloud.state.status]}</h4>
       <p>Revision đã xác nhận: {cloud.link.baseRevision}. {cloud.state.message} Dự án: <code>{cloud.link.projectId}</code></p>
-      <div className="project-actions"><button className="btn primary" disabled={cloud.busy || Boolean(cloud.link.conflict)} onClick={() => void cloud.syncNow()}>Đồng bộ ngay</button>{!workspaceMode && <><button className="btn" disabled={cloud.busy} onClick={() => void cloud.makeCode()}>Tạo mã liên kết</button><button className="btn" disabled={cloud.busy} onClick={() => void cloud.loadDevices()}>Xem thiết bị đã ghép</button><button className="btn" disabled={cloud.busy} onClick={() => setUnlinking(true)}>Ngắt liên kết trên máy này…</button></>}</div>
+      <div className="project-actions"><button className="btn primary" disabled={cloud.busy || manual?.busy || Boolean(cloud.link.conflict)} onClick={() => manual ? manual.run() : void cloud.syncNow()}>Đồng bộ ngay</button>{!workspaceMode && <><button className="btn" disabled={cloud.busy} onClick={() => void cloud.makeCode()}>Tạo mã liên kết</button><button className="btn" disabled={cloud.busy} onClick={() => void cloud.loadDevices()}>Xem thiết bị đã ghép</button><button className="btn" disabled={cloud.busy} onClick={() => setUnlinking(true)}>Ngắt liên kết trên máy này…</button></>}</div>
       {cloud.pairing && <div className="confirmation"><p>Nhập mã này trên Web/Desktop đích. Dùng một lần, chỉ cấp quyền chỉnh sửa dự án đang chọn.</p><output className="pairing-code" aria-label="Mã liên kết thiết bị">{cloud.pairing.code}</output><p>Hết hạn lúc {new Date(cloud.pairing.expiresAt).toLocaleTimeString('vi-VN')}. Tạo mã mới sẽ vô hiệu mã trước từ thiết bị này. Không gửi mã cho người lạ.</p></div>}
       {cloud.link.conflict && <div className="storage-error" role="alert"><h4>Đã giữ cả bản local và bản cloud</h4>
         <p>Local: {document.nodes.length} hình / {document.edges.length} cạnh. Cloud revision {cloud.link.conflict.revision}: {cloud.link.conflict.document.nodes.length} hình / {cloud.link.conflict.document.edges.length} cạnh.</p>
@@ -49,6 +50,6 @@ export function CloudPanel({ cloud, document, notice, saveLocal, workspaceMode =
     </section>}
     {!workspaceMode && <section className="cloud-join"><h4>Liên kết một dự án từ thiết bị khác (P5 cũ)</h4><p>Việc liên kết tạo sơ đồ local mới, không ghi đè bản đang mở.</p><form onSubmit={(event) => { event.preventDefault(); void cloud.join(code); }}><label>Mã một lần<input aria-label="Nhập mã liên kết" value={code} maxLength={10} autoComplete="off" spellCheck={false} onChange={(event) => setCode(event.target.value.toUpperCase())}/></label><button className="btn primary" disabled={cloud.busy || code.trim().length !== 10}>Liên kết dự án</button></form></section>}
     {!workspaceMode && <section className="cloud-join"><h4>Khôi phục quyền sơ đồ P5 cũ</h4><form onSubmit={(event) => { event.preventDefault(); void cloud.recover(recoveryText, revokeOnRecovery); }}><label>Chuỗi khôi phục<textarea aria-label="Nhập mã khôi phục" value={recoveryText} rows={3} maxLength={180} autoComplete="off" spellCheck={false} onChange={(event) => setRecoveryText(event.target.value)}/></label><label className="export-checkbox"><input type="checkbox" checked={revokeOnRecovery} onChange={(event) => setRevokeOnRecovery(event.target.checked)}/>Thu hồi quyền tất cả thiết bị cũ khi khôi phục. Bản local trên các máy đó không bị xóa.</label><button className="btn" disabled={cloud.busy || !recoveryText.trim()}>Khôi phục quyền dự án</button></form></section>}
-    <p>Đồng bộ khi đang mở app (poll khoảng 15 giây), khi có mạng/focus lại hoặc bấm Đồng bộ ngay; không phải cộng tác realtime. AI chưa bật ở P5.</p>
+    <p>Không tự gửi/nhận cloud khi đang vẽ, đổi focus hoặc có mạng lại. Bấm Đồng bộ để cập nhật toàn kho hai chiều. Desktop thử đồng bộ hết trước khi thoát; nếu thất bại sẽ hỏi, không âm thầm bỏ hàng đợi. Web cần bấm Đồng bộ trước khi đóng tab; trình duyệt không bảo đảm gửi xong lúc thoát. Tự lưu local vẫn bật.</p>
   </div>;
 }

@@ -13,6 +13,7 @@ test('Kho uses main-area cards; Project and drawing links allow editing but neve
   await expect(page.locator('.workspace-surface')).toBeVisible(); await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Dự án đầu tiên', exact: true }).click();
   await page.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture sibling'); await page.getByRole('button', { name: 'Tạo bản vẽ', exact: true }).click(); await ready(page);
+  await updateLibrary(page); await closeLibrary(page);
   await openLibrary(page);
   await page.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Project khác'); await page.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Project khác', exact: true })).toBeVisible();
