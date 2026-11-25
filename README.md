@@ -1,6 +1,6 @@
 # DiagramAI
 
-P4 đã được chủ dự án chốt. P5 đang điều chỉnh thành **một kho riêng chung Web/Desktop: Dự án → Bản vẽ, vào bằng link riêng, không ghép từng bản** — **chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ mới: [`docs/p5-workspace-status.md`](docs/p5-workspace-status.md); lịch sử per-diagram: [`docs/p5-status.md`](docs/p5-status.md). Hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md).
+P4 đã được chủ dự án chốt. P5 đã triển khai **một kho riêng chung Web/Desktop: Dự án → Bản vẽ, vào bằng link riêng, không ghép từng bản**, chờ nghiệm thu — **chưa phải v1.0; chưa làm P6/AI**. Yêu cầu: [`plan.md`](plan.md). Web: **https://tux1cm.github.io/DiagramAI/**. Tiến độ mới: [`docs/p5-workspace-status.md`](docs/p5-workspace-status.md); lịch sử per-diagram: [`docs/p5-status.md`](docs/p5-status.md). Hướng dẫn: [`docs/p5-usage.md`](docs/p5-usage.md).
 
 ## Chạy Web trên Windows
 

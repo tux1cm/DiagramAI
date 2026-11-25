@@ -16,6 +16,12 @@
 - Link kho là quyền chung, không phải tài khoản hoặc quyền từng thiết bị. Mất link và mất mọi thiết bị còn nhớ kho thì không có email để khôi phục. Không để link trong file `.diagramai`.
 - Liên kết P5 cũ chỉ có quyền editor cần được đưa vào kho từ thiết bị owner; không tự thay quyền, bỏ pending edits hay nhân bản để lách quyền.
 
+### Backup quản trị
+
+Migration kho chung đã giữ nguyên sơ đồ P5 cũ. Neon Free đầy snapshot nên không xóa snapshot cũ hoặc nâng gói: bản export ứng dụng được mã hóa DPAPI, kiểm tra phục hồi trên schema dev (rollback), kiểm tra độ mới và đối chiếu dữ liệu production trước khi chấp nhận làm backup cho migration. Đây không phải cơ chế bỏ qua backup.
+
+Mặc định script deploy vẫn yêu cầu snapshot. Phương án export phải chọn rõ `--production --verified-export <file.json.dpapi>`; sai branch, quá một giờ, không giải mã được, restore không đạt hoặc dữ liệu đã đổi thì dừng trước migration. Backup hiện ở `%LOCALAPPDATA%/Temp/opencode/diagramai-backups/`, cần lưu sang kho bền vững; chưa có lịch backup tự động.
+
 <details>
 <summary>Tham khảo liên kết P5 từng sơ đồ cũ và vận hành backup</summary>
 
