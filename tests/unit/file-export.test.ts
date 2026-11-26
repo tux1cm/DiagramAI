@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createDocument, createEdge, createNode, serializeDocument } from '@diagramai/diagram-core';
 import { renderDiagramSvg } from '@diagramai/editor/export';
 import { diagramBlob, parseDiagramFile, suggestedName } from '../../packages/ui/src/files/file-port';
+import { Position } from '@xyflow/react';
+import { curvedPath } from '../../packages/editor/src/edge-geometry';
 
 describe('validated portable file and domain export', () => {
   it('round-trips Vietnamese JSON without UI state and rejects the entire invalid graph', async () => {
@@ -21,6 +23,10 @@ describe('validated portable file and domain export', () => {
     expect(result.bounds.x).toBeLessThan(-300); expect(result.bounds.y).toBeLessThan(-200);
     expect(result.svg).toContain('marker-end'); expect(result.svg).toContain('Đi tiếp'); expect(result.svg).toContain('Đạt yêu cầu');
     expect(result.svg).not.toContain('<script>'); expect(result.svg).not.toContain('react-flow');
+    expect(result.svg).toContain('refX="10"'); expect(result.svg).toContain('markerUnits="userSpaceOnUse"');
+    expect(result.svg).toMatch(/d="M[^"]+ L[^"]+ C[^"]+ L[^"]+"/);
+    const [path] = curvedPath({ sourceX: a.x + a.width, sourceY: a.y + a.height / 2, targetX: b.x, targetY: b.y + b.height / 2, sourcePosition: Position.Right, targetPosition: Position.Left });
+    expect(result.svg).toContain(`d="${path}"`);
     expect(renderDiagramSvg(createDocument(), { transparent: true }).svg).not.toContain('<rect');
     expect(renderDiagramSvg(createDocument()).svg).toContain('fill="#ffffff"');
     expect(suggestedName('a/b:*?\n', 'pdf')).toBe('a_b____.pdf');

@@ -1,5 +1,25 @@
-import { getSmoothStepPath, type GetSmoothStepPathParams } from '@xyflow/react';
+import { getBezierPath, getSmoothStepPath, Position, type GetBezierPathParams, type GetSmoothStepPathParams } from '@xyflow/react';
 import { routeAroundNodes, type DiagramNode } from '@diagramai/diagram-core';
+
+export const arrowSize = (strokeWidth: number) => Math.max(8, strokeWidth * 7);
+
+// A Bezier tangent is vertical at the port, but on short, wide branches the
+// curve enters the SIDE of its arrowhead just a few pixels before the tip.
+// Give both ports a straight lead so the whole arrow sits on the port normal.
+export function curvedPath(params: GetBezierPathParams, lead = 20): [string, number, number] {
+  const { sourceX, sourceY, targetX, targetY, sourcePosition = Position.Bottom, targetPosition = Position.Top } = params;
+  const normals = { top: { x: 0, y: -1 }, right: { x: 1, y: 0 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
+  const s = normals[sourcePosition], t = normals[targetPosition];
+  const dx = targetX - sourceX, dy = targetY - sourceY, distance = Math.hypot(dx, dy);
+  if (distance < .001) { const [path, x, y] = getBezierPath(params); return [path, x, y]; }
+  const facingGap = dx * s.x + dy * s.y;
+  const facing = s.x === -t.x && s.y === -t.y && facingGap > 0;
+  const length = Math.min(lead, facing ? facingGap / 3 : distance / 4);
+  const a = { x: sourceX + s.x * length, y: sourceY + s.y * length };
+  const b = { x: targetX + t.x * length, y: targetY + t.y * length };
+  const [curve, x, y] = getBezierPath({ ...params, sourceX: a.x, sourceY: a.y, targetX: b.x, targetY: b.y });
+  return [`M${sourceX},${sourceY} L${a.x},${a.y} ${curve.slice(curve.indexOf('C'))} L${targetX},${targetY}`, x, y];
+}
 
 // Let the router honor both port directions; midpoint-only elbows can travel
 // back through the source shape when both ports face the same way.

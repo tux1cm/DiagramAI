@@ -20,6 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run prepare:reference
       - run: npm run check:p5
+      - run: npm run test:arrows
       - name: Require confirmed Pages base path
         env:
           VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}

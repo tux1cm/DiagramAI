@@ -1,4 +1,4 @@
-param([ValidateSet('p5', 'managed', 'full')][string]$Scope = 'p5')
+param([ValidateSet('p5', 'managed', 'full', 'arrows')][string]$Scope = 'p5')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
@@ -8,7 +8,7 @@ if ($Scope -eq 'p5') {
     $manifest = Get-Content 'File/Desktop_Light/release-manifest.json' -Raw | ConvertFrom-Json
     if ($manifest.phase -notlike 'P5*' -or !$manifest.testBuild) { throw 'P5 focused native suite needs a P5 test build (DIAGRAMAI_TEST_BUILD=1, VITE_API_BASE_URL=http://127.0.0.1:8787).' }
 }
-if ($Scope -eq 'managed') {
+if ($Scope -in @('managed', 'arrows')) {
     $manifest = Get-Content 'File/Desktop_Light/release-manifest.json' -Raw | ConvertFrom-Json
     if ($manifest.phase -notlike 'P5*' -or $manifest.testBuild) { throw 'Managed verification requires the final P5 production build, not a fixture build.' }
 }
@@ -30,7 +30,7 @@ try {
     $exe = Join-Path $install 'diagramai.exe'
     if (!(Test-Path $exe)) { throw 'Installed executable not found' }
     $env:DIAGRAMAI_TEST_EXE = $exe
-    $config = if ($Scope -eq 'full') { 'playwright.desktop.config.ts' } elseif ($Scope -eq 'managed') { 'playwright.desktop-managed-p5.config.ts' } else { 'playwright.desktop-p5.config.ts' }
+    $config = if ($Scope -eq 'full') { 'playwright.desktop.config.ts' } elseif ($Scope -eq 'managed') { 'playwright.desktop-managed-p5.config.ts' } elseif ($Scope -eq 'arrows') { 'playwright.desktop-arrows.config.ts' } else { 'playwright.desktop-p5.config.ts' }
     & npx.cmd playwright test --config $config
     $result = $LASTEXITCODE
 } finally {

@@ -36,10 +36,14 @@ jobs:
       - run: npm ci
       - run: npm run prepare:reference
       - run: npm run check:p5
+      - name: Arrow geometry and SVG export boundary
+        run: npm run test:arrows
       - name: P5 private API, CAS, pairing and P4 persistence boundary
         run: npm run test:p5:neon
       - run: npx playwright install --with-deps chromium
       - run: npm run test:p5:web
+      - name: Focused curved-arrow alignment at three viewport sizes
+        run: npm run test:arrows:web
       - name: Full regression only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_regression }}
         run: npm test && npm run test:e2e

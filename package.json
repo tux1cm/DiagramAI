@@ -24,6 +24,8 @@
     "check:p5": "npm run lint && npm run typecheck && npm run test:p5",
     "test:p5:neon": "node scripts/test-sync-neon.mjs",
     "test:p5:web": "playwright test --config playwright.p5.config.ts",
+    "test:arrows": "vitest run tests/unit/edge-geometry.test.ts tests/unit/file-export.test.ts",
+    "test:arrows:web": "playwright test tests/e2e/arrow-alignment.spec.ts",
     "test:e2e": "playwright test",
     "test:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-desktop.ps1",
     "test:desktop:full": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-desktop.ps1 -Scope full",

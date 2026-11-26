@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { getBezierPath, getSmoothStepPath, Position } from '@xyflow/react';
+import { getSmoothStepPath, Position } from '@xyflow/react';
 import { parseDocument, SHAPE_DEFINITIONS, type DiagramDocument, type DiagramEdge, type DiagramNode, type Port } from '@diagramai/diagram-core';
 import { Shape } from './Shape';
-import { orthogonalPath } from './edge-geometry';
+import { arrowSize, curvedPath, orthogonalPath } from './edge-geometry';
+import { ArrowMarker } from './ArrowMarker';
 import { linesFor } from './text-layout';
 
 const positions = { top: Position.Top, right: Position.Right, bottom: Position.Bottom, left: Position.Left };
@@ -12,7 +13,7 @@ function port(node: DiagramNode, side: Port) {
 function edgeGeometry(edge: DiagramEdge, document: DiagramDocument) {
   const source = port(document.nodes.find((node) => node.id === edge.source)!, edge.sourceHandle), target = port(document.nodes.find((node) => node.id === edge.target)!, edge.targetHandle);
   const params = { sourceX: source.x, sourceY: source.y, targetX: target.x, targetY: target.y, sourcePosition: positions[edge.sourceHandle], targetPosition: positions[edge.targetHandle] };
-  if (edge.kind === 'curved') return getBezierPath(params);
+  if (edge.kind === 'curved') return curvedPath(params, Math.max(20, arrowSize(edge.style.strokeWidth) + 4));
   if (edge.kind === 'smoothstep') return getSmoothStepPath(params);
   if (edge.kind === 'orthogonal') return orthogonalPath(params, document.nodes, edge.source, edge.target);
   return [`M${source.x},${source.y} L${target.x},${target.y}`, (source.x + target.x) / 2, (source.y + target.y) / 2] as const;
@@ -33,7 +34,7 @@ export function renderDiagramSvg(input: DiagramDocument, options: { transparent?
     <title>{document.title}</title>{options.fontCss && <style>{options.fontCss}</style>}
     {!options.transparent && <rect x={x} y={y} width={width} height={height} fill="#ffffff"/>}
     <g strokeLinecap="round" strokeLinejoin="round">{edges.map(({ edge, geometry: [path, lx, ly], labelWidth }) => <g key={edge.id}>
-      <defs>{(['start', 'end'] as const).map((end) => <marker key={end} id={`export-${end}-${edge.id}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill={edge.style.stroke}/></marker>)}</defs>
+      <defs>{(['start', 'end'] as const).map((end) => <ArrowMarker key={end} id={`export-${end}-${edge.id}`} color={edge.style.stroke} size={arrowSize(edge.style.strokeWidth)}/>)}</defs>
       <path d={path} fill="none" stroke={edge.style.stroke} strokeWidth={edge.style.strokeWidth} strokeDasharray={edge.style.dashed ? '6 4' : undefined} markerStart={edge.markerStart === 'arrow' ? `url(#export-start-${edge.id})` : undefined} markerEnd={edge.markerEnd === 'arrow' ? `url(#export-end-${edge.id})` : undefined}/>
       {edge.label && <g><rect x={lx - labelWidth / 2} y={ly - 18} width={labelWidth} height="21" rx="8" fill="#ffffff" stroke="#e9edf5"/><text x={lx} y={ly - 4} textAnchor="middle" fontSize={edge.style.fontSize} fontFamily={options.fontFamily ?? 'Inter, Segoe UI, Arial'} fontWeight="700" fill={edge.style.textColor}>{edge.label}</text></g>}
     </g>)}</g>
