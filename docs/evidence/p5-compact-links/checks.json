@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-26",
+  "applicationCommit": "1db2ef9",
+  "ciRun": 45726964438,
+  "pagesRun": 45726975886,
+  "p5UnitBoundaryPassed": 42,
+  "arrowAndExportUnitPassed": 37,
+  "webWorkspaceScenariosPassed": 5,
+  "nativeProductionSync": { "passed": 1, "testSeconds": 40.3, "harnessSeconds": 47.8 },
+  "nativeProductionArrows": { "passed": 1, "testSeconds": 3.9, "harnessSeconds": 5.0, "savedPayloadUnchanged": true, "cloudRequests": 0 },
+  "publicArrowViewports": { "passed": 3, "widths": [1280, 1366, 1920], "seconds": 4.531, "cloudRequests": 0 },
+  "publicLinkCharacters": { "compact": 104, "legacyWorkspace": 144, "legacyShare": 136 },
+  "existingKeysRotated": false
+}
