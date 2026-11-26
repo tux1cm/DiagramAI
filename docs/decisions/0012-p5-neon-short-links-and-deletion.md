@@ -1,6 +1,6 @@
 # ADR 0012 — Neon-backed short aliases and explicit owner deletion
 
-Status: accepted; production API and native installer verified, Pages publication pending (2026-11-26).
+Status: accepted and released; production API, native installer and public Pages verified (2026-11-26).
 
 ## Context
 

@@ -20,5 +20,11 @@
     "nativeProductionSyncShortLinksAndDeletion": "PASS",
     "nativeArrows": "PASS"
   },
-  "pagesRelease": "pending"
+  "source": "a67e174",
+  "ciRun": 45761848232,
+  "pagesRun": 45761866986,
+  "pagesRelease": "SUCCESS",
+  "focusedWeb": "6/6 PASS",
+  "livePublicSyncShortLinksAndDeletion": "2/2 PASS (43.4s)",
+  "livePublicArrows": "3/3 PASS (1280/1366/1920px)"
 }
