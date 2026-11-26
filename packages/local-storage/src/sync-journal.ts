@@ -130,4 +130,15 @@ export class LocalSyncJournal implements SyncPersistence {
     });
   }
   async unlink(id: string) { await this.mutate(id, async () => ({ value: null, link: null })); }
+  async archiveAndUnlink(id: string, copyId = newId()): Promise<string | null> {
+    return this.mutate(id, async ({ link }) => {
+      if (!link) return { value: null };
+      const records: StoredProject[] = [];
+      if (link.conflict) {
+        const cloud = parseDocument({ ...link.conflict.document, documentId: copyId, title: `${link.conflict.document.title.slice(0, 70)} (cloud trước xóa)` });
+        records.push(await recordFor(cloud, 1));
+      }
+      return { value: records[0]?.documentId ?? null, link: null, records };
+    });
+  }
 }

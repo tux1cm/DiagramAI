@@ -12,11 +12,35 @@ pub struct Commit {expected_generation:Option<i64>,state:Value,key:Option<String
 pub struct ShareAccess {id:String,key:String}
 pub fn save_share(path:&Path,input:ShareAccess)->Result<()> {
     if uuid::Uuid::parse_str(&input.id).is_err()||!input.key.starts_with("dai_share_v1_"){return Err("Link chia sẻ không hợp lệ.".into());}
+    save_credential(path,&input.id,&input.key)
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShortCredential {id:String,code:String}
+pub fn save_short(path:&Path,input:ShortCredential)->Result<()> {
+    if input.code.len()!=22||!input.code.bytes().all(|b|b.is_ascii_alphanumeric()||b==b'_'||b==b'-')||!matches!(input.code.as_bytes().last(),Some(b'A'|b'Q'|b'g'|b'w')){return Err("Link ngắn không hợp lệ.".into());}
+    save_credential(path,&input.id,&format!("dai_link_v1_{}",input.code))
+}
+fn save_credential(path:&Path,id:&str,key:&str)->Result<()> {
+    if uuid::Uuid::parse_str(id).is_err(){return Err("ID quyền không hợp lệ.".into());}
     let mut db=storage::open(path)?;let tx=db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate).map_err(error)?;
-    if crate::sync::credential(path,&input.id)?.is_some_and(|key|key!=input.key){return Err("Không thay quyền đã lưu bằng link khác.".into());}
-    vault::write(path,&input.id,&input.key)?;
-    tx.execute("INSERT INTO device_credentials VALUES (?1,?2) ON CONFLICT(device_id) DO UPDATE SET reference=excluded.reference",params![input.id,format!("dpapi:{}",input.id)]).map_err(error)?;
+    if crate::sync::credential(path,id)?.is_some_and(|old|old!=key){return Err("Không thay quyền đã lưu bằng link khác.".into());}
+    vault::write(path,id,key)?;
+    tx.execute("INSERT INTO device_credentials VALUES (?1,?2) ON CONFLICT(device_id) DO UPDATE SET reference=excluded.reference",params![id,format!("dpapi:{id}")]).map_err(error)?;
     tx.commit().map_err(error)
+}
+fn check_hash(hash:&str)->Result<()> {if hash.len()!=64||!hash.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b)){return Err("Cache link không hợp lệ.".into());}Ok(())}
+pub fn read_short(path:&Path,hash:&str)->Result<Option<Value>> {
+    check_hash(hash)?;
+    let raw:Option<String>=storage::open(path)?.query_row("SELECT value FROM local_settings WHERE key=?1",[format!("short-link:{hash}")],|row|row.get(0)).optional().map_err(error)?;
+    raw.map(|value|serde_json::from_str(&value).map_err(error)).transpose()
+}
+pub fn write_short(path:&Path,hash:&str,binding:Value)->Result<()> {
+    check_hash(hash)?;
+    let id=binding["id"].as_str().ok_or("Thiếu ID link.")?;let access=binding["accessId"].as_str().ok_or("Thiếu ID scope.")?;
+    if binding.as_object().map_or(true,|obj|obj.len()!=3)||uuid::Uuid::parse_str(id).is_err()||uuid::Uuid::parse_str(access).is_err()||!matches!(binding["kind"].as_str(),Some("workspace"|"share")){return Err("Cache link không hợp lệ.".into());}
+    if !crate::sync::credential(path,id)?.is_some_and(|value|value.starts_with("dai_link_v1_")){return Err("Chưa lưu quyền link ngắn.".into());}
+    storage::open(path)?.execute("INSERT INTO local_settings VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value",params![format!("short-link:{hash}"),serde_json::to_string(&binding).map_err(error)?]).map_err(error)?;Ok(())
 }
 pub fn read_share_catalog(path:&Path,id:&str)->Result<Option<Value>> {
     if uuid::Uuid::parse_str(id).is_err(){return Err("ID chia sẻ không hợp lệ.".into());}
@@ -71,6 +95,16 @@ pub fn write(path:&Path,input:Commit)->Result<()> {
     tx.commit().map_err(error)
 }
 #[cfg(all(test,windows))]mod tests {
+    #[test]fn short_code_is_dpapi_only_and_cache_contains_no_secret(){
+        let temp=tempfile::tempdir().unwrap();let path=temp.path().join("short.sqlite");let id=uuid::Uuid::new_v4().to_string();let code=format!("{}A","a".repeat(21));let hash="f".repeat(64);
+        super::save_short(&path,super::ShortCredential{id:id.clone(),code:code.clone()}).unwrap();
+        let binding=serde_json::json!({"id":id,"kind":"share","accessId":uuid::Uuid::new_v4().to_string()});
+        super::write_short(&path,&hash,binding.clone()).unwrap();assert_eq!(super::read_short(&path,&hash).unwrap().unwrap(),binding);
+        assert_eq!(crate::sync::credential(&path,&id).unwrap().unwrap(),format!("dai_link_v1_{code}"));
+        assert!(!std::fs::read(&path).unwrap().windows(code.len()).any(|bytes|bytes==code.as_bytes()));
+        assert!(super::save_short(&path,super::ShortCredential{id:id.clone(),code:format!("{}Q","b".repeat(21))}).is_err());
+        assert_eq!(crate::sync::credential(&path,&id).unwrap().unwrap(),format!("dai_link_v1_{code}"));
+    }
     #[test]fn explicit_switch_archives_old_catalog_and_keys_and_rejects_stale_switch(){
         let temp=tempfile::tempdir().unwrap();let path=temp.path().join("switch.sqlite");
         let old_id=uuid::Uuid::new_v4().to_string();let new_id=uuid::Uuid::new_v4().to_string();

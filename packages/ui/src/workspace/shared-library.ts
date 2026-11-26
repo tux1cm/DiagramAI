@@ -1,6 +1,7 @@
 import { newId } from '@diagramai/diagram-core';
 import { LocalSyncJournal, WorkspaceJournal, type ProjectSession } from '@diagramai/local-storage';
-import { ShareKeySchema, SyncApiError, SyncClient, workspaceLocalId, shareLink, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
+import { ShareKeySchema, SyncApiError, SyncClient, workspaceLocalId, shareLink, parseShareLink, parseShortLink, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
+import { resolveShort, rememberShort } from './short-links';
 
 interface SharedSnapshot { active: boolean; busy: boolean; error: string; catalog: ShareCatalog | null; mappings: { cloudId: string; localId: string }[]; view: 'drawings' | 'editor' }
 export class SharedLibrary {
@@ -54,6 +55,16 @@ export class SharedLibrary {
       const active = this.session.getSnapshot().store.getSnapshot().document.documentId;
       if (this.snapshot.mappings.some((item) => item.localId === active)) await this.open(active);
     }
+  }
+  async connectLink(text: string) {
+    const reference = parseShortLink(text);
+    if (!reference) { const access = parseShareLink(text); return this.connect(access.id, access.key); }
+    if (reference.kind !== 'share') throw new Error('Cần link Project/bản vẽ, không phải link kho chính.');
+    this.publish({ active: true, busy: true, view: 'drawings' });
+    const resolution = await resolveShort(this.session.repository, this.api(), reference);
+    if (resolution.kind !== 'share') throw new Error('Link ngắn không đúng phạm vi.');
+    await this.connect(resolution.access.id, resolution.access.key);
+    await rememberShort(this.session.repository, reference, resolution);
   }
   showList = () => this.publish({ view: 'drawings' });
   showEditor = () => this.publish({ view: 'editor' });

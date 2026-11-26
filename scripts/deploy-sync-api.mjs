@@ -14,7 +14,7 @@ function neon(args, extraEnv = {}) {
   if (result.status !== 0) {
     let detail = `${result.stderr ?? ''}\n${result.stdout ?? ''}`;
     for (const value of Object.values({ ...process.env, ...extraEnv })) if (value && value.length >= 16) detail = detail.split(value).join('[redacted]');
-    detail = detail.replace(/postgres(?:ql)?:\/\/[^\s"']+/g, '[database redacted]').replace(/dai_(?:device|recovery)_v1_[A-Za-z0-9_-]+/g, '[capability redacted]');
+    detail = detail.replace(/postgres(?:ql)?:\/\/[^\s"']+/g, '[database redacted]').replace(/dai_(?:device|recovery|workspace|share|link)_v1_[A-Za-z0-9_-]+/g, '[capability redacted]');
     throw new Error(`Neon command failed; no billing change or fallback attempted. Sanitized diagnostics:\n${detail.slice(-6000)}`);
   }
   return result.stdout;

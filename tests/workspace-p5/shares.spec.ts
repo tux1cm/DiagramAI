@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { createWorkspace, openLibrary, openWorkspaceDrawing, closeLibrary, updateLibrary } from '../helpers/workspace';
 import { editCloudNode, syncNow, closeCloud } from '../helpers/cloud';
 import { ready, nodeModel } from '../helpers/drawing';
-import { parseShareLink } from '@diagramai/sync-core';
+import { parseShortLink, SyncClient } from '@diagramai/sync-core';
 
 async function getShare(page: Page, name: string) {
   await page.getByRole('button', { name, exact: true }).click();
@@ -32,10 +32,11 @@ test('Kho uses main-area cards; Project and drawing links allow editing but neve
     await expect(recipient.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true })).toBeVisible({ timeout: 20000 });
     await expect(recipient.getByRole('button', { name: 'Mở bản vẽ P5 fixture sibling', exact: true })).toBeVisible();
     await expect(recipient.getByText('Project khác', { exact: true })).toHaveCount(0); await expect(recipient.getByText('P5 fixture outside', { exact: true })).toHaveCount(0);
+    await expect(recipient.getByRole('button', { name: /^Xóa (Project|bản vẽ)/ })).toHaveCount(0);
     await recipient.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true }).click(); await ready(recipient);
     await editCloudNode(recipient, 'Tiếp nhận vật tư', 'Sửa từ link Project'); await syncNow(recipient);
     await openWorkspaceDrawing(page, source.title); await syncNow(page); await closeCloud(page); await expect(nodeModel(page, 'Sửa từ link Project')).toBeVisible();
-    const legacy = new URL(drawingLink), drawingAccess = parseShareLink(drawingLink); legacy.hash = `/share/${drawingAccess.id}/${drawingAccess.key}`;
+    const legacy = new URL(drawingLink), drawingAccess = (await new SyncClient(process.env.DIAGRAMAI_MANAGED_TEST_API ?? 'http://127.0.0.1:8787/').resolveShortLink(parseShortLink(drawingLink)!)).access; legacy.hash = `/share/${drawingAccess.id}/${drawingAccess.key}`;
     await one.goto(legacy.href); await ready(one); await expect(nodeModel(one, 'Sửa từ link Project')).toBeVisible();
     await editCloudNode(one, 'Sửa từ link Project', 'Sửa từ link bản vẽ'); await syncNow(one); await closeCloud(one);
     await openLibrary(one);

@@ -2,7 +2,7 @@ import { LocalConflict, prepareRecord, type LocalRepository, type ProjectSummary
 import { saveWithSync } from './sync-journal';
 import type { LocalSyncLink, SyncBackend, SyncCommit, SyncRead } from './sync-types';
 import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit, type WorkspaceState } from './workspace';
-import { ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
+import { ShareAccessSchema, ShareCatalogSchema, ShortBindingSchema, ShortCredentialSchema, type ShortBinding, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 
 export class IndexedDbRepository implements LocalRepository, SyncBackend {
   readonly kind = 'indexeddb' as const;
@@ -62,11 +62,30 @@ export class IndexedDbRepository implements LocalRepository, SyncBackend {
   }
   async syncCredential(deviceId: string) { return (await this.read<{ token?: string } | undefined>('device_credentials', (store) => store.get(deviceId)))?.token ?? null; }
   async shareCredentialWrite(access: ShareAccess) {
-    const checked = ShareAccessSchema.parse(access), db = await this.open();
+    const checked = ShareAccessSchema.parse(access); return this.writeCredential(checked.id, checked.key);
+  }
+  async shortCredentialWrite(input: { id: string; code: string }) {
+    const checked = ShortCredentialSchema.parse(input); return this.writeCredential(checked.id, `dai_link_v1_${checked.code}`);
+  }
+  private async writeCredential(id: string, token: string) {
+    const db = await this.open();
     return new Promise<void>((resolve, reject) => {
-      const tx = db.transaction('device_credentials', 'readwrite', { durability: 'strict' }), store = tx.objectStore('device_credentials'), old = store.get(checked.id);
+      const tx = db.transaction('device_credentials', 'readwrite', { durability: 'strict' }), store = tx.objectStore('device_credentials'), old = store.get(id);
       tx.oncomplete = () => resolve(); tx.onabort = () => reject(new Error('Chưa lưu được quyền chia sẻ; không thay quyền đã có.'));
-      old.onsuccess = () => { if (old.result && old.result.token !== checked.key) { tx.abort(); return; } store.put({ deviceId: checked.id, token: checked.key }); };
+      old.onsuccess = () => { if (old.result && old.result.token !== token) { tx.abort(); return; } store.put({ deviceId: id, token }); };
+    });
+  }
+  async shortLinkRead(hash: string) {
+    if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('Mã cache link không hợp lệ.');
+    const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get(`short-link:${hash}`));
+    return record ? ShortBindingSchema.parse(record.value) : null;
+  }
+  async shortLinkWrite(hash: string, binding: ShortBinding) {
+    if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('Mã cache link không hợp lệ.');
+    const value = ShortBindingSchema.parse(binding), db = await this.open();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction('settings', 'readwrite', { durability: 'strict' }); tx.objectStore('settings').put({ key: `short-link:${hash}`, value });
+      tx.oncomplete = () => resolve(); tx.onabort = () => reject(new Error('Chưa nhớ được link ngắn trên máy.'));
     });
   }
   async shareCatalogRead(id: string) { const record = await this.read<{ value: unknown } | undefined>('settings', (store) => store.get(`share-catalog:${id}`)); return record ? ShareCatalogSchema.parse(record.value) : null; }

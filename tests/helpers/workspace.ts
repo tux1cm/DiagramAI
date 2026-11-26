@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { SyncApiError, SyncClient, workspaceLink } from '@diagramai/sync-core';
+import { parseShortLink, SyncApiError, SyncClient, workspaceLink } from '@diagramai/sync-core';
 import { setTimeout as delay } from 'node:timers/promises';
 import { ready } from './drawing';
 
@@ -60,9 +60,13 @@ export async function createWorkspace(page: Page, navigate = true) {
   await page.getByText('Link kho chính của tôi', { exact: true }).click();
   await page.getByRole('button', { name: 'Hiện link kho chính', exact: true }).click();
   const field = page.getByRole('textbox', { name: 'Link kho chính', exact: true });
-  await expect(field).toBeVisible(); expect((await field.inputValue()) === link).toBe(true);
+   await expect(field).toBeVisible();
+   const short = await field.inputValue(), reference = parseShortLink(short);
+   expect(reference?.kind).toBe('workspace');
+   const resolved = await api.resolveShortLink(reference!);
+   expect(resolved.access.id === access.id && resolved.access.key === access.key).toBe(true);
   await page.getByRole('button', { name: 'Ẩn link', exact: true }).click();
-  return { title, link, access };
+   return { title, link: short, access };
   } catch (error) { await api.deleteWorkspace(access).catch(() => {}); throw error; }
 }
 export async function connectWorkspace(page: Page, link: string, viaFragment = true) {

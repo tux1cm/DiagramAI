@@ -3,7 +3,7 @@ import { LocalConflict, type LocalRepository, type ProjectSummary, type SaveRequ
 import { saveWithSync } from './sync-journal';
 import type { SyncBackend, SyncCommit, SyncRead } from './sync-types';
 import { checkWorkspaceCommit, WorkspaceStateSchema, type WorkspaceCommit } from './workspace';
-import { ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
+import { ShareAccessSchema, ShareCatalogSchema, ShortBindingSchema, ShortCredentialSchema, type ShortBinding, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
   try { return await invoke<T>(command, args); }
@@ -18,6 +18,9 @@ export class SqliteRepository implements LocalRepository, SyncBackend {
   syncCommit(request: SyncCommit) { return call<void>('sync_commit', { request }); }
   syncCredential(deviceId: string) { return call<string | null>('sync_credential', { deviceId }); }
   shareCredentialWrite(access: ShareAccess) { return call<void>('share_credential_write', { access: ShareAccessSchema.parse(access) }); }
+  shortCredentialWrite(input: { id: string; code: string }) { return call<void>('short_credential_write', { input: ShortCredentialSchema.parse(input) }); }
+  async shortLinkRead(hash: string) { const value = await call<unknown>('short_link_read', { hash }); return value === null ? null : ShortBindingSchema.parse(value); }
+  shortLinkWrite(hash: string, binding: ShortBinding) { return call<void>('short_link_write', { hash, binding: ShortBindingSchema.parse(binding) }); }
   async shareCatalogRead(id: string) { const value = await call<unknown>('share_catalog_read', { id }); return value === null ? null : ShareCatalogSchema.parse(value); }
   async workspaceArchives() { return (await call<unknown[]>('workspace_archives')).map((value) => WorkspaceStateSchema.parse(value)); }
   shareCatalogWrite(catalog: ShareCatalog) { return call<void>('share_catalog_write', { catalog: ShareCatalogSchema.parse(catalog) }); }

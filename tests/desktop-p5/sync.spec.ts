@@ -54,6 +54,7 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     }
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_device_v1_'))).toBe(false);
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_workspace_v1_'))).toBe(false);
+    expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_link_v1_'))).toBe(false);
     await desk.route(apiPattern, (route) => route.abort('internetdisconnected'));
     await editCloudNode(desk, 'Web về Desktop', 'Desktop offline sau restart');
     await openCloud(desk); await desk.getByRole('button', { name: 'Đồng bộ ngay', exact: true }).click(); await expect(cloudButton(desk)).toContainText('Chưa đồng bộ hết');
@@ -98,6 +99,16 @@ test('P5 private workspace Desktop ↔ Web, catalog discovery, DPAPI/restart and
     expect(readFileSync(join(profile, 'data', 'diagramai.sqlite')).includes(Buffer.from('dai_share_v1_'))).toBe(false);
     await desk.screenshot({ path: testInfo.outputPath('desktop-scoped-project.png') });
     await desk.getByRole('button', { name: 'Về kho của tôi', exact: true }).click();
+    await desk.getByRole('button', { name: 'Xóa Project Dự án từ Web', exact: true }).click();
+    const deletion = desk.getByRole('dialog', { name: 'Xác nhận xóa' });
+    await expect(deletion).toContainText('Sẽ xóa 1 bản vẽ');
+    await expect(deletion.getByRole('button', { name: 'Xác nhận xóa', exact: true })).toBeDisabled();
+    await deletion.getByRole('checkbox').check(); await deletion.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
+    await expect(deletion).toHaveCount(0); await updateLibrary(web);
+    await expect(web.getByRole('button', { name: 'Dự án từ Web', exact: true })).toHaveCount(0);
+    await desk.getByRole('button', { name: 'File / Bản vẽ chỉ trên máy / Checkpoint', exact: true }).click();
+    await expect(desk.locator('.project-list')).toContainText('P5 fixture mới từ Web');
+    await closeLibrary(desk); await openLibrary(desk);
     await desk.getByRole('textbox', { name: 'Tên dự án mới', exact: true }).fill('Project tạo trên Desktop');
     await desk.getByRole('button', { name: 'Tạo dự án', exact: true }).click();
     await desk.getByRole('textbox', { name: 'Tên bản vẽ mới', exact: true }).fill('P5 fixture Desktop gửi khi thoát');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { createDocument, newId } from '@diagramai/diagram-core';
 import { IndexedDbRepository, LocalSyncJournal, ProjectSession } from '@diagramai/local-storage';
-import { SyncApiError, SyncCoordinator, type CloudSnapshot, type DeviceGrant, type PushSnapshot, type SyncClient, type WorkspaceCatalog } from '@diagramai/sync-core';
+import { parseShortLink, snapshotHash, SyncApiError, SyncCoordinator, type CloudSnapshot, type DeviceGrant, type PushSnapshot, type SyncClient, type WorkspaceCatalog } from '@diagramai/sync-core';
 import { WorkspaceLibrary } from '../../packages/ui/src/workspace/library';
 import { SharedLibrary } from '../../packages/ui/src/workspace/shared-library';
 import { hasPendingCloud, synchronizeAll } from '../../packages/ui/src/cloud/manual-sync';
@@ -10,8 +10,20 @@ import { hasPendingCloud, synchronizeAll } from '../../packages/ui/src/cloud/man
 function fakeCloud() {
   const catalog: WorkspaceCatalog = { id: newId(), folders: [], drawings: [] };
   const bindings = new Map<string, { credentials: DeviceGrant; snapshot: CloudSnapshot }>();
+  const deleted: { kind: 'project' | 'drawing'; id: string }[] = [];
   let unavailable = false, loseCreateAck = false, creates = 0;
   const api = {
+    async workspaceChanges() { if (unavailable) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return { deleted: structuredClone(deleted) }; },
+    async workspaceDeleteItem(_: unknown, kind: 'project' | 'drawing', id: string, input: { drawings: { id: string; revision: number }[] }) {
+      if (unavailable) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE');
+      if (deleted.some((item) => item.kind === kind && item.id === id)) return;
+      const affected = catalog.drawings.filter((item) => kind === 'project' ? item.folderId === id : item.id === id);
+      if (affected.length !== input.drawings.length || affected.some((item) => !input.drawings.some((expected) => expected.id === item.id && expected.revision === bindings.get(item.id)!.snapshot.revision))) throw new SyncApiError(409, 'DELETE_CHANGED');
+      deleted.push({ kind, id }, ...affected.map((item) => ({ kind: 'drawing' as const, id: item.id })));
+      catalog.drawings = catalog.drawings.filter((item) => !affected.includes(item));
+      if (kind === 'project') catalog.folders = catalog.folders.filter((item) => item.id !== id);
+      for (const item of affected) bindings.delete(item.id);
+    },
     async createWorkspace(access: { id: string }) { if (unavailable) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); catalog.id = access.id; },
     async workspaceCatalog() { if (unavailable) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); return structuredClone(catalog); },
     async workspaceFolder(_: unknown, folder: { id: string; title: string }) { if (unavailable) throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); if (!catalog.folders.some((item) => item.id === folder.id)) catalog.folders.push(folder); return folder; },
@@ -44,6 +56,58 @@ async function local(api: SyncClient, factory = new IDBFactory(), name = newId()
   return { repo, session, library, factory, name };
 }
 describe('workspace catalog → P5 journal recovery boundary', () => {
+  it('persists alias identity before publication and reuses it after lost ACK/restart, never showing an unacknowledged link', async () => {
+    const cloud = fakeCloud(), a = await local(cloud.api); await a.library.create();
+    const requests: { id: string; code: string }[] = [];
+    cloud.api.createShortLink = async (_, input) => { requests.push(input); throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); };
+    await expect(a.library.shareLink('https://example.com/')).rejects.toThrow();
+    const state = (await a.repo.workspaceRead())!, alias = state.shortLinks![0];
+    expect(alias.published).toBe(false); expect(requests).toHaveLength(1);
+    expect(await a.repo.syncCredential(alias.id)).toBe(`dai_link_v1_${requests[0].code}`);
+    a.session.dispose();
+    cloud.api.createShortLink = async (_, input) => { requests.push(input); };
+    const reopened = await local(cloud.api, a.factory, a.name);
+    const url = await reopened.library.shareLink('https://example.com/');
+    expect(requests[1]).toEqual(requests[0]); expect(parseShortLink(url)?.code).toBe(requests[0].code);
+    expect((await reopened.repo.workspaceRead())!.shortLinks![0].published).toBe(true);
+    await reopened.library.shareLink('https://example.com/'); expect(requests).toHaveLength(2); reopened.session.dispose();
+  });
+  it('deletes with confirmation revisions, retains offline edits/conflict branches and never republishes retired IDs', async () => {
+    const cloud = fakeCloud(), a = await local(cloud.api); await a.library.create();
+    const state = (await a.repo.workspaceRead())!, access = { id: state.id, key: (await a.repo.syncCredential(state.id))! };
+    const b = await local(cloud.api); await b.library.connect(access);
+    const mapping = (await b.repo.workspaceRead())!.drawings[0], journal = new LocalSyncJournal(b.repo);
+    await b.session.openProject(mapping.localId);
+    b.session.getSnapshot().store.execute([{ type: 'rename', title: 'Unsent offline branch' }]); await b.session.flush();
+    const remote = structuredClone(cloud.bindings.get(mapping.cloudId)!.snapshot);
+    remote.document.title = 'Conflicting remote branch'; remote.revision++;
+    remote.hash = await snapshotHash(remote.document);
+    await journal.conflict(mapping.localId, remote);
+    const preview = await a.library.previewDelete('project', state.selectedFolderId);
+    await a.library.deleteItem(preview); await b.library.synchronize(true);
+    expect((await b.repo.workspaceRead())!.folders).toHaveLength(0);
+    expect((await b.repo.workspaceRead())!.drawings).toHaveLength(0);
+    expect(await journal.link(mapping.localId)).toBeNull();
+    expect((await b.repo.list()).map((item) => item.title)).toEqual(expect.arrayContaining(['Unsent offline branch', 'Conflicting remote branch (cloud trước xóa)']));
+    const count = cloud.creates(); await b.library.synchronize(true); expect(cloud.creates()).toBe(count);
+    expect(await hasPendingCloud(b.session)).toBe(false);
+    const c = await local(cloud.api); await c.library.connect(access);
+    expect((await c.repo.workspaceRead())!.folders).toHaveLength(0);
+    a.session.dispose(); b.session.dispose(); c.session.dispose();
+  });
+  it('refuses changed membership/revisions and retries deletion after a lost ACK without dropping local copies', async () => {
+    const cloud = fakeCloud(), a = await local(cloud.api); await a.library.create();
+    const state = (await a.repo.workspaceRead())!, preview = await a.library.previewDelete('project', state.selectedFolderId);
+    await a.library.createDrawing('Added after confirmation'); await a.library.synchronize(true);
+    await expect(a.library.deleteItem(preview)).rejects.toMatchObject({ code: 'DELETE_CHANGED' });
+    const fresh = await a.library.previewDelete('project', state.selectedFolderId), remove = cloud.api.workspaceDeleteItem.bind(cloud.api);
+    cloud.api.workspaceDeleteItem = async (...args) => { await remove(...args); throw new SyncApiError(0, 'NETWORK_UNAVAILABLE'); };
+    await expect(a.library.deleteItem(fresh)).rejects.toThrow();
+    expect((await a.repo.workspaceRead())!.drawings.length).toBeGreaterThan(0);
+    cloud.api.workspaceDeleteItem = remove; await a.library.deleteItem(fresh);
+    expect((await a.repo.workspaceRead())!.drawings).toHaveLength(0);
+    expect((await a.repo.list()).map((item) => item.title)).toContain('Added after confirmation'); a.session.dispose();
+  });
   it('explicitly switches to the Web workspace, archives the Desktop catalog/queue/key atomically, and can restore it', async () => {
     const webCloud = fakeCloud(), deskCloud = fakeCloud(), web = await local(webCloud.api), desk = await local(deskCloud.api);
     await web.library.create(); await web.library.createDrawing('Web shared drawing'); await web.library.synchronize(true);

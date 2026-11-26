@@ -71,7 +71,7 @@ export function useCloud(session: ProjectSession, local: ProjectSessionSnapshot,
     let active = true;
     void journal.link(id).then((current) => { if (active) setLink(current); }).catch(() => { if (active) setError('Không đọc được liên kết cloud local.'); });
     return () => { active = false; };
-  }, [journal, id, local.version, local.status, syncState.revision, syncState.status]);
+  }, [journal, id, local.version, local.status, local.projects, syncState.revision, syncState.status]);
   const operation = async (work: () => Promise<void>) => {
     if (running.current) return; running.current = true; setBusy(true); setError('');
     try { await work(); await refresh(); }

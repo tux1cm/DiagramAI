@@ -26,7 +26,9 @@ fn crypt(_: &[u8], _: bool) -> Result<Vec<u8>> { Err("Kho quyền thiết bị c
 
 pub fn write(database: &Path, id: &str, token: &str) -> Result<()> {
     let suffix=token.strip_prefix("dai_device_v1_").or_else(||token.strip_prefix("dai_workspace_v1_")).or_else(||token.strip_prefix("dai_share_v1_"));
-    if !suffix.is_some_and(|value|value.len()==43&&value.bytes().all(|byte|byte.is_ascii_alphanumeric()||byte==b'_'||byte==b'-')) { return Err("Token thiết bị/kho không hợp lệ.".into()); }
+    let short=token.strip_prefix("dai_link_v1_");
+    let alphabet=|value:&str|value.bytes().all(|byte|byte.is_ascii_alphanumeric()||byte==b'_'||byte==b'-');
+    if !suffix.is_some_and(|value|value.len()==43&&alphabet(value))&&!short.is_some_and(|value|value.len()==22&&alphabet(value)&&matches!(value.as_bytes().last(),Some(b'A'|b'Q'|b'g'|b'w'))) { return Err("Token thiết bị/kho không hợp lệ.".into()); }
     let path = path(database,id)?; let parent = path.parent().ok_or("Không có thư mục quyền.")?;
     std::fs::create_dir_all(parent).map_err(|_| "Không tạo được kho quyền Windows.")?;
     let encrypted = crypt(token.as_bytes(),true)?;

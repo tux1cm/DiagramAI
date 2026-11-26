@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { DiagramDocument } from '@diagramai/diagram-core';
 import { CreatedProjectSchema, DeviceLabelSchema, JoinedProjectSchema, PushReceiptSchema, SnapshotSchema, snapshotHash, type PushSnapshot } from './protocol';
-import { WorkspaceAccessSchema, WorkspaceCatalogSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, CreateShareSchema, ShareAccessSchema, ShareCatalogSchema, type ShareAccess, type WorkspaceAccess } from './workspace';
+import { WorkspaceAccessSchema, WorkspaceCatalogSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, CreateShareSchema, ShareAccessSchema, ShareCatalogSchema, CreateShortLinkSchema, ShortReferenceSchema, ShortResolutionSchema, WorkspaceChangesSchema, WorkspaceDeleteSchema, type ShortReference, type ShareAccess, type WorkspaceAccess } from './workspace';
 
 export class SyncApiError extends Error {
   constructor(readonly status: number, readonly code: string, readonly retryAfterMs = 0) { super(code); }
@@ -89,6 +89,14 @@ export class SyncClient {
     const checked = WorkspaceAccessSchema.parse(access), result = WorkspaceCatalogSchema.parse(await this.request(`v1/workspaces/${checked.id}`, 'GET', checked.key));
     if (result.id !== checked.id) throw new SyncApiError(502, 'WORKSPACE_MISMATCH'); return result;
   }
+  async workspaceChanges(access: WorkspaceAccess) {
+    const checked = WorkspaceAccessSchema.parse(access);
+    return WorkspaceChangesSchema.parse(await this.request(`v1/workspaces/${checked.id}/changes`, 'GET', checked.key));
+  }
+  async workspaceDeleteItem(access: WorkspaceAccess, kind: 'project' | 'drawing', id: string, input: z.infer<typeof WorkspaceDeleteSchema>) {
+    const checked = WorkspaceAccessSchema.parse(access);
+    await this.request(`v1/workspaces/${checked.id}/${kind === 'project' ? 'folders' : 'drawings'}/${projectKey(id)}`, 'DELETE', checked.key, WorkspaceDeleteSchema.parse(input));
+  }
   async workspaceFolder(access: WorkspaceAccess, folder: z.infer<typeof WorkspaceFolderSchema>) {
     return WorkspaceFolderSchema.parse(await this.request(`v1/workspaces/${projectKey(access.id)}/folders`, 'POST', access.key, WorkspaceFolderSchema.parse(folder)));
   }
@@ -112,6 +120,17 @@ export class SyncClient {
   async shareCatalog(access: ShareAccess) {
     const checked = ShareAccessSchema.parse({ id: access.id, key: access.key }), result = ShareCatalogSchema.parse(await this.request(`v1/shares/${checked.id}`, 'GET', checked.key));
     if (result.id !== checked.id) throw new SyncApiError(502, 'SHARE_MISMATCH'); return result;
+  }
+  async createShortLink(access: WorkspaceAccess, input: z.infer<typeof CreateShortLinkSchema>) {
+    const checked = WorkspaceAccessSchema.parse(access), data = CreateShortLinkSchema.parse(input);
+    const result = z.object({ id: z.uuid() }).strict().parse(await this.request(`v1/workspaces/${checked.id}/short-links`, 'POST', checked.key, data));
+    if (result.id !== data.id) throw new SyncApiError(502, 'SHORT_LINK_MISMATCH');
+  }
+  async resolveShortLink(reference: ShortReference) {
+    const checked = ShortReferenceSchema.parse(reference);
+    const result = ShortResolutionSchema.parse(await this.request(`v1/short-links/${checked.kind}`, 'GET', `dai_link_v1_${checked.code}`));
+    if (result.kind !== checked.kind) throw new SyncApiError(502, 'SHORT_LINK_MISMATCH');
+    return result;
   }
   async shareDrawing(access: ShareAccess, id: string) {
     const checked = ShareAccessSchema.parse({ id: access.id, key: access.key }), target = projectKey(id);

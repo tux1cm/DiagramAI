@@ -1,6 +1,10 @@
 import { newId } from '@diagramai/diagram-core';
 import { decodeRecord, LocalSyncJournal, WorkspaceJournal, type ProjectSession, type WorkspaceState } from '@diagramai/local-storage';
-import { snapshotHash, SyncApiError, SyncClient, workspaceLink, workspaceLocalId, shareLink, type WorkspaceAccess } from '@diagramai/sync-core';
+import { snapshotHash, SyncApiError, SyncClient, workspaceLocalId, parseWorkspaceLink, parseShortLink, shortLink, ShortCodeSchema, type ShareAccess, type ShortResolution, type ShortReference, type WorkspaceAccess } from '@diagramai/sync-core';
+import { resolveShort, rememberShort } from './short-links';
+
+export interface WorkspaceEntry { access: WorkspaceAccess; short?: { reference: ShortReference; resolution: ShortResolution } }
+export interface DeletePreview { workspaceId: string; kind: 'project' | 'drawing'; id: string; title: string; drawings: { id: string; revision: number }[] }
 
 export interface LibrarySnapshot { loading: boolean; busy: boolean; state: WorkspaceState | null; archives: WorkspaceState[]; error: string; view: 'projects' | 'drawings' | 'editor' }
 export class WorkspaceLibrary {
@@ -30,6 +34,9 @@ export class WorkspaceLibrary {
     try { this.publish({ error: '' }); await work(); }
     catch (error) {
       const codes: Record<string, string> = { OWNER_REQUIRED: 'Bản vẽ P5 cũ cần được đưa vào kho từ thiết bị chủ dự án. Bản local và liên kết cũ được giữ nguyên.', CLOUD_PROJECT_LIMIT: 'Cloud đã đủ số bản vẽ của bản preview. Bản local vẫn được giữ.', CLOUD_STORAGE_LIMIT: 'Cloud đã chạm giới hạn dung lượng. Hãy xuất file dự phòng; bản local vẫn còn.', DRAWING_IN_OTHER_WORKSPACE: 'Bản vẽ này thuộc kho khác. Không tự chuyển quyền hoặc gộp dữ liệu.', FOLDER_CONFLICT: 'ID dự án không khớp dữ liệu đã có. Không tự ghi đè tên dự án.' };
+      codes.DELETE_CHANGED = 'Danh sách hoặc phiên bản bản vẽ đã đổi. Chưa xóa; hãy cập nhật kho và xác nhận lại.';
+      codes.ITEM_DELETED = 'Mục này đã bị xóa ở thiết bị khác. Bản local vẫn được giữ; hãy cập nhật kho.';
+      codes.DELETE_HISTORY_LIMIT = 'Kho đã chạm giới hạn lịch sử xóa. Không xóa thêm để bảo vệ dữ liệu khỏi tự tạo lại.';
       const message = error instanceof SyncApiError ? codes[error.code] ?? (error.status === 401 ? 'Link kho không còn hợp lệ hoặc thiếu quyền. Bản local vẫn còn.' : error.status === 429 ? 'Kho đang giới hạn yêu cầu. Bản local vẫn còn; hãy chờ rồi đồng bộ lại.' : 'Chưa kết nối/ghi được Neon. Kho và bản vẽ local vẫn còn; bấm Đồng bộ lại khi có mạng.') : error instanceof Error ? error.message : 'Chưa hoàn tất thao tác kho.';
       this.publish({ error: message });
     }
@@ -62,7 +69,7 @@ export class WorkspaceLibrary {
     const catalog = await this.api().workspaceCatalog(access), folderId = catalog.folders[0]?.id ?? newId();
     const archived = old ? (await this.session.repository.workspaceArchives()).find((item) => item.id === access.id) : undefined;
     const state: WorkspaceState = { ...archived, id: access.id, generation: (old?.generation ?? 0) + 1, provisionPending: false, selectedFolderId: archived?.selectedFolderId ?? folderId,
-      folders: catalog.folders.length ? catalog.folders.map((folder) => ({ ...folder, pending: false })) : [{ id: folderId, title: 'Dự án đầu tiên', pending: true }],
+      folders: catalog.folders.map((folder) => ({ ...folder, pending: false })),
       drawings: archived?.drawings ?? [], ignoredLocalIds: (await this.session.repository.list()).filter((record) => !archived?.drawings.some((item) => item.localId === record.documentId)).map((record) => record.documentId) };
     if (archived) state.folders.push(...archived.folders.filter((folder) => folder.pending && !state.folders.some((item) => item.id === folder.id)));
     await this.session.repository.workspaceWrite({ expectedGeneration: old?.generation ?? null, state, key: access.key, ...(old ? { switchFromId: old.id } : {}) });
@@ -75,10 +82,47 @@ export class WorkspaceLibrary {
     if (!key) throw new Error('Không đọc được quyền kho đã lưu.');
     this.showProjects(); await this.connect({ id, key }, true);
   }
+  async resolveLink(text: string): Promise<WorkspaceEntry> {
+    const reference = parseShortLink(text);
+    if (!reference) return { access: parseWorkspaceLink(text) };
+    if (reference.kind !== 'workspace') throw new Error('Cần link kho chính, không phải link Project/bản vẽ.');
+    const resolution = await resolveShort(this.session.repository, this.api(), reference);
+    if (resolution.kind !== 'workspace') throw new Error('Link ngắn không đúng phạm vi.');
+    return { access: resolution.access, short: { reference, resolution } };
+  }
+  async connectEntry(entry: WorkspaceEntry, confirmed = false) {
+    await this.connect(entry.access, confirmed);
+    if (entry.short) {
+      await rememberShort(this.session.repository, entry.short.reference, entry.short.resolution);
+      await this.update((state) => state.shortLinks?.some((item) => item.id === entry.short!.resolution.id) ? state : { ...state, shortLinks: [...state.shortLinks ?? [], { id: entry.short!.resolution.id, kind: 'workspace', accessId: entry.access.id, published: true }] });
+    }
+  }
+  async connectLink(text: string, confirmed = false) { await this.connectEntry(await this.resolveLink(text), confirmed); }
+  private async shortUrl(base: string, share?: ShareAccess) {
+    const owner = await this.access(), kind = share ? 'share' as const : 'workspace' as const, accessId = share?.id ?? owner.id;
+    let state = (await this.session.repository.workspaceRead())!;
+    let entry = state.shortLinks?.find((item) => item.kind === kind && item.accessId === accessId);
+    if (!entry) {
+      const id = newId(), code = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+      await this.session.repository.shortCredentialWrite({ id, code });
+      await this.update((current) => current.shortLinks?.some((item) => item.kind === kind && item.accessId === accessId) ? current : { ...current, shortLinks: [...current.shortLinks ?? [], { id, kind, accessId, published: false }] });
+      state = (await this.session.repository.workspaceRead())!;
+      entry = state.shortLinks!.find((item) => item.kind === kind && item.accessId === accessId)!;
+    }
+    const credential = await this.session.repository.syncCredential(entry.id);
+    if (!credential?.startsWith('dai_link_v1_')) throw new Error('Không đọc được mã link ngắn trên máy.');
+    const code = ShortCodeSchema.parse(credential.slice('dai_link_v1_'.length));
+    if (!entry.published) {
+      await this.api().createShortLink(owner, { id: entry.id, code, ...(share ? { share } : {}) });
+      await this.update((current) => ({ ...current, shortLinks: current.shortLinks?.map((item) => item.id === entry!.id ? { ...item, published: true } : item) }));
+    }
+    await rememberShort(this.session.repository, { kind, code }, { id: entry.id, kind, access: share ?? owner } as ShortResolution);
+    return shortLink(base, { kind, code });
+  }
   async shareLink(base: string) {
     if (this.running) await this.running;
     if ((await this.session.repository.workspaceRead())?.provisionPending) await this.synchronize(true);
-    return workspaceLink(base, await this.access());
+    return this.shortUrl(base);
   }
   showProjects = () => this.publish({ view: 'projects' });
   showEditor = () => this.publish({ view: 'editor' });
@@ -98,7 +142,7 @@ export class WorkspaceLibrary {
     const key = await this.session.repository.syncCredential(entry.id);
     if (!key) throw new Error('Không đọc được link chia sẻ đã lưu.');
     await this.api().createShare(await this.access(), { ...entry, key });
-    return shareLink(base, { id: entry.id, key });
+    return this.shortUrl(base, { id: entry.id, key });
   }
   async selectFolder(id: string) { await this.update((state) => { if (!state.folders.some((folder) => folder.id === id)) throw new Error('Dự án không còn trong kho.'); return { ...state, selectedFolderId: id }; }); this.publish({ view: 'drawings' }); }
   async createFolder(title: string) {
@@ -115,11 +159,62 @@ export class WorkspaceLibrary {
   async createDrawing(title: string) {
     if (!title.trim()) throw new Error('Hãy nhập tên bản vẽ.');
     const folderId = this.snapshot.state?.selectedFolderId;
+    if (!this.snapshot.state?.folders.some((folder) => folder.id === folderId)) throw new Error('Hãy tạo hoặc chọn Project trước.');
     await this.session.createProject(title.trim());
     await this.enroll(this.session.getSnapshot().store.getSnapshot().document.documentId, folderId);
     this.showEditor();
   }
   async open(localId: string) { await this.session.openProject(localId); this.showEditor(); }
+  async previewDelete(kind: 'project' | 'drawing', id: string): Promise<DeletePreview> {
+    if (await this.session.repository.shareContextRead()) throw new Error('Chỉ xóa từ kho chính.');
+    if (this.running) await this.running;
+    await this.session.flush();
+    const access = await this.access(), catalog = await this.api().workspaceCatalog(access);
+    const target = kind === 'project' ? catalog.folders.find((item) => item.id === id) : catalog.drawings.find((item) => item.id === id);
+    if (!target) throw new Error('Mục này chưa có trên cloud hoặc đã xóa. Hãy cập nhật kho rồi thử lại.');
+    return { workspaceId: access.id, kind, id, title: target.title, drawings: catalog.drawings.filter((item) => kind === 'project' ? item.folderId === id : item.id === id).map(({ id, revision }) => ({ id, revision })) };
+  }
+  async deleteItem(preview: DeletePreview) {
+    if (this.running) throw new Error('Hãy chờ đồng bộ kết thúc trước khi xóa.');
+    if (await this.session.repository.shareContextRead()) throw new Error('Chỉ xóa từ kho chính.');
+    const access = await this.access();
+    if (access.id !== preview.workspaceId) throw new Error('Kho đã đổi. Hãy xác nhận lại từ kho hiện tại.');
+    const work = async () => {
+      await this.session.flush(); this.publish({ busy: true });
+      await this.api().workspaceDeleteItem(access, preview.kind, preview.id, { drawings: preview.drawings });
+      await this.applyDeletions(access);
+      await this.session.refreshProjects();
+    };
+    this.running = work().finally(() => { this.running = null; this.publish({ busy: false }); });
+    return this.running;
+  }
+  private async applyDeletions(access: WorkspaceAccess) {
+    const changes = await this.api().workspaceChanges(access);
+    const folders = new Set(changes.deleted.filter((item) => item.kind === 'project').map((item) => item.id));
+    const drawings = new Set(changes.deleted.filter((item) => item.kind === 'drawing').map((item) => item.id));
+    const state = await this.session.repository.workspaceRead();
+    if (!state || state.id !== access.id) throw new Error('Kho đã đổi trong lúc cập nhật.');
+    const retired = state.drawings.filter((item) => folders.has(item.folderId) || drawings.has(item.cloudId));
+    const localIds = new Set(retired.map((item) => item.localId));
+    for (const record of await this.session.repository.list()) {
+      const link = await this.syncJournal.link(record.documentId);
+      if (link && drawings.has(link.projectId)) localIds.add(record.documentId);
+    }
+    const ignored = [...localIds];
+    // Commit preservation IDs BEFORE unlinking: retry safely after either write fails.
+    for (const localId of localIds) {
+      const copyId = newId();
+      await this.update((current) => ({ ...current, ignoredLocalIds: [...new Set([...current.ignoredLocalIds, localId, copyId])] }));
+      const copy = await this.syncJournal.archiveAndUnlink(localId, copyId);
+      if (copy) ignored.push(copy);
+    }
+    await this.update((current) => ({ ...current,
+      selectedFolderId: folders.has(current.selectedFolderId) ? current.folders.find((item) => !folders.has(item.id))?.id ?? current.selectedFolderId : current.selectedFolderId,
+      folders: current.folders.filter((item) => !folders.has(item.id)),
+      drawings: current.drawings.filter((item) => !folders.has(item.folderId) && !drawings.has(item.cloudId)),
+      ignoredLocalIds: [...new Set([...current.ignoredLocalIds, ...ignored])],
+    }));
+  }
   synchronize(force = false, includeOwner = false): Promise<void> {
     if (this.running) return force ? this.running.then(() => this.synchronize(true, includeOwner), () => this.synchronize(true, includeOwner)) : this.running;
     this.running = this.sync(force, includeOwner).finally(() => { this.running = null; this.publish({ busy: false }); });
@@ -133,6 +228,7 @@ export class WorkspaceLibrary {
     const errors: unknown[] = [];
     const access = await this.access(), api = this.api();
     if (state.provisionPending) { await api.createWorkspace(access); await this.update((current) => ({ ...current, provisionPending: false })); }
+    await this.applyDeletions(access);
     state = (await this.reload())!;
     for (const folder of state.folders.filter((folder) => folder.pending)) {
       try {
@@ -141,10 +237,11 @@ export class WorkspaceLibrary {
       } catch (error) { errors.push(error); }
     }
     state = (await this.reload())!;
+    const selectedFolderId = state.selectedFolderId;
     for (const record of await this.session.repository.shareContextRead() ? [] : await this.session.repository.list()) {
       // Existing local files on a newly joined device and preserved conflict
       // branches stay local. New drawings/imports/copies join the selected project.
-      if (!state.ignoredLocalIds.includes(record.documentId) && !state.drawings.some((drawing) => drawing.localId === record.documentId) && !record.title.includes('(xung đột local)')) await this.enroll(record.documentId);
+      if (state.folders.some((folder) => folder.id === selectedFolderId) && !state.ignoredLocalIds.includes(record.documentId) && !state.drawings.some((drawing) => drawing.localId === record.documentId) && !record.title.includes('(xung đột local)')) await this.enroll(record.documentId);
     }
     state = (await this.reload())!;
     for (const drawing of state.drawings.filter((drawing) => !drawing.published)) {

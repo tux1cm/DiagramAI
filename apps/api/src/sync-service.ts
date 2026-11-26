@@ -3,7 +3,8 @@ import type { Pool, PoolClient } from 'pg';
 import { serializeDocument } from '@diagramai/diagram-core';
 import { CreateProjectSchema, PushSnapshotSchema, RecoverySchema, RedeemSchema, MAX_SYNC_BYTES, type CloudSnapshot, type DeviceGrant } from '@diagramai/sync-core';
 import { z } from 'zod';
-import { WorkspaceAccessSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, WorkspaceKeySchema, CreateShareSchema, ShareKeySchema } from '@diagramai/sync-core';
+import { WorkspaceAccessSchema, WorkspaceFolderSchema, WorkspaceCreateDrawingSchema, WorkspaceAdoptSchema, WorkspaceKeySchema, CreateShareSchema, ShareKeySchema, ShareAccessSchema, CreateShortLinkSchema, ShortCodeSchema, WorkspaceDeleteSchema } from '@diagramai/sync-core';
+import { shortLinkAad, wrapShortAccess, unwrapShortAccess } from './short-link-crypto';
 
 export class SyncFault extends Error {
   constructor(readonly status: number, readonly code: string) { super(code); }
@@ -32,14 +33,14 @@ export class SyncService {
   // cannot roll back their rate-limit charge. No raw IP/token is stored or logged.
   async rate(route: string, address: string | null, bearer?: string) {
     const minute = Math.floor(Date.now() / 60000), day = Math.floor(Date.now() / 86400000);
-    await this.bucket(`global:${route}`, minute, route === 'create' || route === 'workspace-create' ? 5 : route === 'redeem' || route === 'recover' ? 20 : 300, 120);
+    await this.bucket(`global:${route}`, minute, route === 'create' || route === 'workspace-create' ? 5 : route === 'redeem' || route === 'recover' ? 20 : route === 'short-resolve' ? 60 : 300, 120);
     // One charge per HTTP request, including idempotent retries. Previously the
     // create route charged this SAME bucket twice with two different limits.
     // Keep a small explicit 20-request/day creation budget plus the 5/min cap;
     // storage/project/workspace hard caps are unchanged. Never reset counters.
     await this.bucket(`global:${route}:day`, day, route === 'create' || route === 'workspace-create' ? 20 : route === 'push' ? 1000 : ['pull', 'workspace-list', 'share-access'].includes(route) ? 30000 : 3000, 172800, 1, 'DAILY_LIMIT');
     const identity = createHmac('sha256', this.rateSecret).update(`${day}\0${address ?? 'unverified-shared'}`).digest('hex');
-    await this.bucket(`ip:${route}:${identity}`, minute, ['create', 'workspace-create', 'redeem', 'recover'].includes(route) ? 5 : 120, 120);
+    await this.bucket(`ip:${route}:${identity}`, minute, ['create', 'workspace-create', 'redeem', 'recover'].includes(route) ? 5 : route === 'short-resolve' ? 20 : 120, 120);
     if (bearer) await this.bucket(`device:${route}:${hash('rate', bearer)}`, minute, 60, 120);
     await this.pool.query('DELETE FROM diagramai_sync.rate_limit_buckets WHERE (bucket_id,window_start) IN (SELECT bucket_id,window_start FROM diagramai_sync.rate_limit_buckets WHERE expires_at < now() LIMIT 100)');
   }
@@ -139,6 +140,7 @@ export class SyncService {
     const folder = WorkspaceFolderSchema.parse(input);
     return this.tx(async (db) => {
       await this.workspaceAuth(db, id, key);
+      await this.notDeleted(db, id, 'project', folder.id);
       const existing = await db.query('SELECT workspace_id,title FROM diagramai_sync.workspace_folders WHERE id=$1', [folder.id]);
       if (existing.rowCount) {
         if (existing.rows[0].workspace_id !== id.toLowerCase() || existing.rows[0].title !== folder.title) throw new SyncFault(409, 'FOLDER_CONFLICT');
@@ -162,6 +164,7 @@ export class SyncService {
     const data = WorkspaceCreateDrawingSchema.parse(input);
     return this.tx(async (db) => {
       await this.workspaceAuth(db, id, key);
+      await this.notDeleted(db, id, 'drawing', data.id); await this.notDeleted(db, id, 'project', data.folderId);
       const folder = await db.query('SELECT id FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, data.folderId]);
       if (!folder.rowCount) throw new SyncFault(404, 'FOLDER_NOT_FOUND');
       const existing = await db.query('SELECT p.id,p.document_id FROM diagramai_sync.projects p JOIN diagramai_sync.workspace_drawings d ON d.project_id=p.id WHERE d.workspace_id=$1 AND p.create_operation_id=$2', [id, data.project.operationId]);
@@ -178,6 +181,7 @@ export class SyncService {
     const data = WorkspaceAdoptSchema.parse(input);
     return this.tx(async (db) => {
       await this.workspaceAuth(db, id, key);
+      await this.notDeleted(db, id, 'drawing', data.projectId); await this.notDeleted(db, id, 'project', data.folderId);
       await this.authorize(db, data.projectId, data.token, true);
       await db.query('SELECT id FROM diagramai_sync.projects WHERE id=$1 FOR UPDATE', [data.projectId]);
       if (!(await db.query('SELECT id FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, data.folderId])).rowCount) throw new SyncFault(404, 'FOLDER_NOT_FOUND');
@@ -205,6 +209,40 @@ export class SyncService {
       await db.query('DELETE FROM diagramai_sync.workspaces WHERE id=$1', [id]);
     });
   }
+  private async notDeleted(db: PoolClient, workspaceId: string, kind: 'project' | 'drawing', id: string) {
+    if ((await db.query('SELECT 1 FROM diagramai_sync.workspace_deletions WHERE workspace_id=$1 AND kind=$2 AND target_id=$3', [workspaceId, kind, id])).rowCount) throw new SyncFault(409, 'ITEM_DELETED');
+  }
+  async workspaceChanges(id: string, key: string) {
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      return { deleted: (await db.query('SELECT kind,target_id AS id FROM diagramai_sync.workspace_deletions WHERE workspace_id=$1 ORDER BY deleted_at,kind,target_id', [id])).rows };
+    });
+  }
+  async workspaceDeleteItem(id: string, key: string, kind: 'project' | 'drawing', targetId: string, input: unknown) {
+    const data = WorkspaceDeleteSchema.parse(input);
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, id, key);
+      if ((await db.query('SELECT 1 FROM diagramai_sync.workspace_deletions WHERE workspace_id=$1 AND kind=$2 AND target_id=$3', [id, kind, targetId])).rowCount) return;
+      const target = kind === 'project'
+        ? await db.query('SELECT 1 FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, targetId])
+        : await db.query('SELECT 1 FROM diagramai_sync.workspace_drawings WHERE workspace_id=$1 AND project_id=$2', [id, targetId]);
+      if (!target.rowCount) throw new SyncFault(404, 'DELETE_TARGET_NOT_FOUND');
+      const current = await db.query('SELECT p.id,p.current_revision,p.snapshot_bytes FROM diagramai_sync.projects p JOIN diagramai_sync.workspace_drawings d ON d.project_id=p.id WHERE d.workspace_id=$1 AND (($2=\'project\' AND d.folder_id=$3) OR ($2=\'drawing\' AND d.project_id=$3)) ORDER BY p.id FOR UPDATE OF p', [id, kind, targetId]);
+      if (current.rows.length !== data.drawings.length || current.rows.some((row) => !data.drawings.some((item) => item.id === row.id && item.revision === Number(row.current_revision)))) throw new SyncFault(409, 'DELETE_CHANGED');
+      const count = Number((await db.query('SELECT count(*) AS count FROM diagramai_sync.workspace_deletions WHERE workspace_id=$1', [id])).rows[0].count);
+      if (count + current.rows.length + 1 > 2000) throw new SyncFault(409, 'DELETE_HISTORY_LIMIT');
+      await db.query('INSERT INTO diagramai_sync.workspace_deletions(workspace_id,kind,target_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [id, kind, targetId]);
+      let released = 0;
+      for (const row of current.rows) {
+        await db.query('INSERT INTO diagramai_sync.workspace_deletions(workspace_id,kind,target_id) VALUES ($1,\'drawing\',$2) ON CONFLICT DO NOTHING', [id, row.id]);
+        const revisions = await db.query('SELECT coalesce(sum(snapshot_bytes),0)::bigint AS bytes FROM diagramai_sync.project_revisions WHERE project_id=$1', [row.id]);
+        released += Number(row.snapshot_bytes) + Number(revisions.rows[0].bytes);
+        await db.query('DELETE FROM diagramai_sync.projects WHERE id=$1', [row.id]);
+      }
+      if (kind === 'project') await db.query('DELETE FROM diagramai_sync.workspace_folders WHERE workspace_id=$1 AND id=$2', [id, targetId]);
+      await db.query('UPDATE diagramai_sync.storage_budget SET used_bytes=used_bytes-$1,project_count=project_count-$2 WHERE singleton', [released, current.rows.length]);
+    });
+  }
   async createShare(workspaceId: string, workspaceKey: string, input: unknown) {
     const data = CreateShareSchema.parse(input);
     return this.tx(async (db) => {
@@ -222,6 +260,45 @@ export class SyncService {
         await db.query('INSERT INTO diagramai_sync.share_links(id,workspace_id,folder_id,project_id,key_hash) VALUES ($1,$2,$3,$4,$5)', [data.id, workspaceId, data.kind === 'project' ? data.targetId : null, data.kind === 'drawing' ? data.targetId : null, hash('share', data.key)]);
       }
       return { id: data.id.toLowerCase() };
+    });
+  }
+  async createShortLink(workspaceId: string, workspaceKey: string, input: unknown) {
+    const data = CreateShortLinkSchema.parse(input);
+    return this.tx(async (db) => {
+      await this.workspaceAuth(db, workspaceId, workspaceKey);
+      if (data.share) {
+        const scope = await this.shareAuth(db, data.share.id, data.share.key);
+        if (scope.workspace_id !== workspaceId.toLowerCase()) throw new SyncFault(404, 'SHARE_TARGET_NOT_FOUND');
+      }
+      const access = data.share ?? { id: workspaceId.toLowerCase(), key: workspaceKey };
+      const row = { id: data.id.toLowerCase(), workspace_id: workspaceId.toLowerCase(), share_id: data.share?.id.toLowerCase() ?? null, code_hash: hash('short-link', data.code) };
+      const existing = await db.query('SELECT * FROM diagramai_sync.short_links WHERE id=$1 OR code_hash=$2 FOR UPDATE', [row.id, row.code_hash]);
+      if (existing.rowCount) {
+        const old = existing.rows[0];
+        if (old.id !== row.id || old.workspace_id !== row.workspace_id || old.share_id !== row.share_id || old.code_hash !== row.code_hash) throw new SyncFault(409, 'SHORT_LINK_CONFLICT');
+        const stored = (data.share ? ShareAccessSchema : WorkspaceAccessSchema).parse(unwrapShortAccess(old, data.code, shortLinkAad(old)));
+        if (stored.id !== access.id.toLowerCase() || stored.key !== access.key) throw new SyncFault(409, 'SHORT_LINK_CONFLICT');
+      } else {
+        if (Number((await db.query('SELECT count(*) AS count FROM diagramai_sync.short_links WHERE workspace_id=$1', [workspaceId])).rows[0].count) >= 200) throw new SyncFault(409, 'SHORT_LINK_LIMIT');
+        const sealed = wrapShortAccess({ ...access, id: access.id.toLowerCase() }, data.code, shortLinkAad(row));
+        await db.query('INSERT INTO diagramai_sync.short_links(id,workspace_id,share_id,code_hash,ciphertext,iv,tag) VALUES ($1,$2,$3,$4,$5,$6,$7)', [row.id, row.workspace_id, row.share_id, row.code_hash, sealed.ciphertext, sealed.iv, sealed.tag]);
+      }
+      return { id: row.id };
+    });
+  }
+  async resolveShortLink(kind: 'workspace' | 'share', code: string) {
+    if (!ShortCodeSchema.safeParse(code).success) throw new SyncFault(401, 'ACCESS_DENIED');
+    return this.tx(async (db) => {
+      const found = await db.query('SELECT * FROM diagramai_sync.short_links WHERE code_hash=$1', [hash('short-link', code)]), row = found.rows[0];
+      if (!row || (row.share_id ? 'share' : 'workspace') !== kind) throw new SyncFault(401, 'ACCESS_DENIED');
+      let access: { id: string; key: string };
+      try { access = (kind === 'share' ? ShareAccessSchema : WorkspaceAccessSchema).parse(unwrapShortAccess(row, code, shortLinkAad(row))); }
+      catch { throw new SyncFault(401, 'ACCESS_DENIED'); }
+      if (access.id !== (row.share_id ?? row.workspace_id)) throw new SyncFault(401, 'ACCESS_DENIED');
+      if (kind === 'workspace') await this.workspaceAuth(db, access.id, access.key);
+      else { const scope = await this.shareAuth(db, access.id, access.key); if (scope.workspace_id !== row.workspace_id) throw new SyncFault(401, 'ACCESS_DENIED'); }
+      // A scoped alias never returns the workspace ID/key or an owner grant.
+      return { id: row.id as string, kind, access };
     });
   }
   private async shareAuth(db: PoolClient, id: string, key: string) {

@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-26",
+  "project": "blue-mode-25353507",
+  "devBranch": "br-soft-surf-b3hws0gm",
+  "productionBranch": "br-noisy-waterfall-b37wduo3",
+  "migrations": [5, 6],
+  "backup": {
+    "protection": "Windows CurrentUser DPAPI",
+    "sha256": "6cd547cdf6465db5b1c173a19c55f6da47ce5252eaa37cc88863d7d3acae3eeb",
+    "projects": 4,
+    "constrainedDevRestoreVerified": true,
+    "currentProductionDataComparedBeforeMigration": true
+  },
+  "devHttpSmoke": "PASS: exact capability resolution, wrong-kind denial, deletion changes and idempotent retry",
+  "productionApiDeployment": "PASS",
+  "installer": {
+    "bytes": 3957178,
+    "sha256": "49f3eac098065dc1818da7a71aede9f3f6a4ceb5dab659417d0b936379687cb5",
+    "testBuild": false,
+    "nativeProductionSyncShortLinksAndDeletion": "PASS",
+    "nativeArrows": "PASS"
+  },
+  "pagesRelease": "pending"
+}

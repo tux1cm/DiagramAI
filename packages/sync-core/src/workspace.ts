@@ -11,6 +11,20 @@ export type WorkspaceCatalog = z.infer<typeof WorkspaceCatalogSchema>;
 export const ShareKeySchema = z.string().regex(/^dai_share_v1_[A-Za-z0-9_-]{43}$/);
 export const ShareAccessSchema = z.object({ id: z.uuid(), key: ShareKeySchema }).strict();
 export type ShareAccess = z.infer<typeof ShareAccessSchema>;
+export const ShortCodeSchema = z.string().regex(/^[A-Za-z0-9_-]{21}[AQgw]$/);
+export const ShortReferenceSchema = z.object({ kind: z.enum(['workspace', 'share']), code: ShortCodeSchema }).strict();
+export type ShortReference = z.infer<typeof ShortReferenceSchema>;
+export const ShortBindingSchema = z.object({ id: z.uuid(), kind: z.enum(['workspace', 'share']), accessId: z.uuid() }).strict();
+export type ShortBinding = z.infer<typeof ShortBindingSchema>;
+export const ShortCredentialSchema = z.object({ id: z.uuid(), code: ShortCodeSchema }).strict();
+export const CreateShortLinkSchema = z.object({ id: z.uuid(), code: ShortCodeSchema, share: ShareAccessSchema.optional() }).strict();
+export const ShortResolutionSchema = z.discriminatedUnion('kind', [
+  z.object({ id: z.uuid(), kind: z.literal('workspace'), access: WorkspaceAccessSchema }).strict(),
+  z.object({ id: z.uuid(), kind: z.literal('share'), access: ShareAccessSchema }).strict(),
+]);
+export type ShortResolution = z.infer<typeof ShortResolutionSchema>;
+export const WorkspaceChangesSchema = z.object({ deleted: z.array(z.object({ kind: z.enum(['project', 'drawing']), id: z.uuid() }).strict()).max(2000) }).strict();
+export const WorkspaceDeleteSchema = z.object({ drawings: z.array(z.object({ id: z.uuid(), revision: z.number().int().positive() }).strict()).max(100) }).strict().refine((value) => new Set(value.drawings.map((item) => item.id)).size === value.drawings.length);
 export const CreateShareSchema = ShareAccessSchema.extend({ kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict();
 export const ShareCatalogSchema = WorkspaceCatalogSchema.extend({ kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict();
 export type ShareCatalog = z.infer<typeof ShareCatalogSchema>;
@@ -33,6 +47,20 @@ function expandAccess(code: string, prefix: 'dai_workspace_v1_' | 'dai_share_v1_
 }
 export const isWorkspaceLinkHash = (hash: string) => hash.startsWith('#/workspace/') || hash.startsWith('#/w/');
 export const isShareLinkHash = (hash: string) => hash.startsWith('#/share/') || hash.startsWith('#/s/');
+export function parseShortLink(text: string): ShortReference | null {
+  const url = new URL(text.trim());
+  if (url.username || url.password || url.search || !(url.protocol === 'https:' || url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) throw new Error('Link không hợp lệ.');
+  const match = url.hash.match(/^#\/(w|s)\/([A-Za-z0-9_-]{22})$/);
+  return match ? ShortReferenceSchema.parse({ kind: match[1] === 'w' ? 'workspace' : 'share', code: match[2] }) : null;
+}
+export function shortLink(base: string, reference: ShortReference) {
+  const checked = ShortReferenceSchema.parse(reference), url = new URL(base);
+  url.search = ''; url.hash = `/${checked.kind === 'workspace' ? 'w' : 's'}/${checked.code}`; return url.href;
+}
+export async function shortCodeHash(code: string) {
+  ShortCodeSchema.parse(code);
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`short-link\0${code}`)))].map((value) => value.toString(16).padStart(2, '0')).join('');
+}
 
 // Fragment secrets are never sent to the static host or in request/referrer URLs.
 export function parseWorkspaceLink(text: string): WorkspaceAccess {

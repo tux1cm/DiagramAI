@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { WorkspaceKeySchema, WorkspaceFolderSchema, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
+import { WorkspaceKeySchema, WorkspaceFolderSchema, ShortBindingSchema, ShortCredentialSchema, type ShortBinding, type ShareAccess, type ShareCatalog } from '@diagramai/sync-core';
 import { LocalConflict } from './types';
 
 export const WorkspaceStateSchema = z.object({
@@ -9,6 +9,7 @@ export const WorkspaceStateSchema = z.object({
   drawings: z.array(z.object({ localId: z.uuid(), cloudId: z.uuid(), folderId: z.uuid(), operationId: z.uuid(), published: z.boolean() }).strict()).max(100),
   ignoredLocalIds: z.array(z.uuid()).max(10000),
   shares: z.array(z.object({ id: z.uuid(), kind: z.enum(['project', 'drawing']), targetId: z.uuid() }).strict()).max(100).optional(),
+  shortLinks: z.array(ShortBindingSchema.extend({ published: z.boolean() }).strict()).max(200).optional(),
 }).strict();
 export type WorkspaceState = z.infer<typeof WorkspaceStateSchema>;
 export interface WorkspaceCommit { expectedGeneration: number | null; state: WorkspaceState; key?: string; switchFromId?: string }
@@ -18,6 +19,9 @@ export interface WorkspaceBackend {
   workspaceArchives(): Promise<WorkspaceState[]>;
   syncCredential(id: string): Promise<string | null>;
   shareCredentialWrite(access: ShareAccess): Promise<void>;
+  shortCredentialWrite(input: z.infer<typeof ShortCredentialSchema>): Promise<void>;
+  shortLinkRead(hash: string): Promise<ShortBinding | null>;
+  shortLinkWrite(hash: string, binding: ShortBinding): Promise<void>;
   shareCatalogRead(id: string): Promise<ShareCatalog | null>;
   shareCatalogWrite(catalog: ShareCatalog): Promise<void>;
   shareContextRead(): Promise<string | null>;

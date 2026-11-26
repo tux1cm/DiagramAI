@@ -20,6 +20,35 @@ async function fixture() {
 const request = (path: string, options: RequestInit = {}) => new Request(`https://api.example${path}`, { ...options, headers: { Origin: origin, ...options.headers } });
 
 describe('P5 guarded HTTP boundary', () => {
+  it('short-code resolution is header-only, rate-limited, no-store, and never bypasses authentication', async () => {
+    const { service } = await fixture(), code = `${'a'.repeat(21)}A`;
+    const resolveShortLink = vi.fn(async () => ({ id: projectId, kind: 'share' as const, access: { id: deviceId, key: `dai_share_v1_${'a'.repeat(43)}` } }));
+    const handler = createSyncHandler({ service: { ...service, resolveShortLink }, enabled: true, allowedOrigins: [origin] });
+    expect((await handler(request(`/v1/short-links/share?code=${code}`))).status).toBe(400);
+    expect((await handler(request('/v1/short-links/share'))).status).toBe(401);
+    expect(resolveShortLink).not.toHaveBeenCalled();
+    const auth = { headers: { Authorization: `Bearer dai_link_v1_${code}` } };
+    const response = await handler(request('/v1/short-links/share', auth));
+    expect(response.status).toBe(200); expect(response.headers.get('Cache-Control')).toBe('no-store');
+    expect(resolveShortLink).toHaveBeenCalledWith('share', code);
+    service.rate.mockRejectedValueOnce(new SyncFault(429, 'RATE_LIMITED'));
+    const limited = await handler(request('/v1/short-links/workspace', auth));
+    expect(limited.status).toBe(429); expect(limited.headers.get('Retry-After')).toBe('60'); expect(resolveShortLink).toHaveBeenCalledTimes(1);
+  });
+  it('item deletion requires workspace auth and a JSON revision preview, with distinct access/deletion routes', async () => {
+    const { service } = await fixture(), key = `dai_workspace_v1_${'a'.repeat(43)}`;
+    const workspaceDeleteItem = vi.fn(async () => {}), workspaceChanges = vi.fn(async () => ({ deleted: [] }));
+    const handler = createSyncHandler({ service: { ...service, workspaceDeleteItem, workspaceChanges }, enabled: true, allowedOrigins: [origin] });
+    const url = `/v1/workspaces/${projectId}/drawings/${deviceId}`;
+    expect((await handler(request(url, { method: 'DELETE', headers: { Authorization: `Bearer dai_share_v1_${'a'.repeat(43)}` } }))).status).toBe(401);
+    const auth = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+    expect((await handler(request(`${url}/access`, { method: 'DELETE', headers: auth, body: '{}' }))).status).toBe(404);
+    const body = { drawings: [{ id: deviceId, revision: 1 }] };
+    expect((await handler(request(url, { method: 'DELETE', headers: auth, body: JSON.stringify(body) }))).status).toBe(204);
+    expect(workspaceDeleteItem).toHaveBeenCalledWith(projectId, key, 'drawing', deviceId, body);
+    expect((await handler(request(`/v1/workspaces/${projectId}/changes`, { headers: auth }))).status).toBe(200);
+    expect(workspaceChanges).toHaveBeenCalledWith(projectId, key);
+  });
   it('stays disabled without explicit configuration and never claims a sync success', async () => {
     const handler = createSyncHandler({ allowedOrigins: [origin], enabled: true });
     expect(await (await handler(request('/v1/sync/status'))).json()).toEqual({ enabled: false, protocolVersion: 1 });
