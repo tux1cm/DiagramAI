@@ -869,6 +869,8 @@ Việc làm:
 
 **Chốt link kho chính (2026-11-25):** chủ chọn **một link kho chính** dùng trên Web/Desktop, app nhớ sau lần mở đầu; không thêm tài khoản/mã quản trị và không tạo kho riêng theo từng thiết bị. Gỡ nút tạo kho khỏi luồng người dùng. Link kho chính là toàn quyền dành riêng cho chủ; người nhận chỉ được gửi link Project/bản vẽ giới hạn scope, không được suy ra quyền kho chính khi mở root. Mở main link khác cần xác nhận và giữ archive/dữ liệu cũ, không tự gộp/xóa. Chi tiết ADR 0010.
 
+**Chỉnh hiển thị/link (2026-11-26):** sửa đầu mũi tên nhánh cong ngắn: đoạn vào thẳng theo port, tip neo đúng mép, kích thước không phình khi chọn; Canvas/SVG dùng chung, không đổi bản vẽ lưu. Gom UUID + nguyên khóa vào mã link gọn 65 ký tự (`#/w/`, `#/s/`), giữ khóa 256-bit, scope và link cũ; không lookup server hoặc URL shortener ngoài. Chi tiết ADR 0011. Không P6 hoặc full regression trước P7.
+
 1. Viết migrations Postgres + integration tests; tách branch dev/prod.
 2. Functions CRUD project private, CAS revision, idempotency/outbox.
 3. Tạo recovery secret + device token, hash token, ghép nối one-time code, revoke; rate limit anti brute-force.

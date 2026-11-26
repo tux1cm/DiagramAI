@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ProjectSession, ProjectSessionSnapshot } from '@diagramai/local-storage';
-import { parseShareLink, SyncClient } from '@diagramai/sync-core';
+import { isShareLinkHash, isWorkspaceLinkHash, parseShareLink, SyncClient } from '@diagramai/sync-core';
 import { SharedLibrary } from './shared-library';
 
 function consume() {
   const hash = window.location.hash;
-  if (!hash.startsWith('#/share/')) return null;
+  if (!isShareLinkHash(hash)) return null;
   let access: { id: string; key?: string; invalid?: boolean };
   try {
     if (/^#\/share\/[a-f0-9-]{36}$/i.test(hash)) access = { id: hash.split('/')[2] };
@@ -15,7 +15,7 @@ function consume() {
   return access;
 }
 export function useShared(session: ProjectSession, _local: ProjectSessionSnapshot, baseUrl: string, syncOne: (id: string, force?: boolean) => Promise<void>) {
-  const [ownerIntent] = useState(() => window.location.hash.startsWith('#/workspace/'));
+  const [ownerIntent] = useState(() => isWorkspaceLinkHash(window.location.hash));
   const [incoming, setIncoming] = useState(() => consume());
   const library = useMemo(() => {
     let client: SyncClient | null = null; try { if (baseUrl) client = new SyncClient(baseUrl); } catch { /* Local remains available. */ }

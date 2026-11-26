@@ -8,7 +8,8 @@ test('one private workspace discovers projects and drawings both ways, preserves
   try {
     await target.goto('./'); await ready(target); await renameDrawing(target, 'Bản local trước khi mở kho');
     const urls: string[] = []; target.on('request', (request) => urls.push(request.url()));
-    await connectWorkspace(target, source.link);
+    const legacy = new URL(source.link); legacy.hash = `/workspace/${source.access.id}/${source.access.key}`;
+    await connectWorkspace(target, legacy.href);
     await expect(target.getByRole('button', { name: 'Dự án đầu tiên', exact: true })).toBeVisible();
     await expect(target.getByRole('dialog')).toHaveCount(0);
     await openWorkspaceDrawing(target, source.title);

@@ -69,7 +69,7 @@ export async function connectWorkspace(page: Page, link: string, viaFragment = t
   const base = new URL(page.url() === 'about:blank' ? 'http://127.0.0.1:4173/p5-test/' : page.url());
   if (viaFragment) {
     const target = new URL(link); base.hash = target.hash; await page.goto(base.href); await expect(page.locator('.editor-app')).toBeVisible();
-    await expect.poll(() => page.url().includes('dai_workspace_v1_')).toBe(false);
+    await expect.poll(() => new URL(page.url()).hash).toBe('#/');
     await openLibrary(page);
     await expect(page.getByRole('button', { name: 'Cập nhật kho ngay', exact: true })).toBeEnabled({ timeout: 20000 });
   } else {

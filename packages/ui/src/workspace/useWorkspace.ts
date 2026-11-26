@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ProjectSession, ProjectSessionSnapshot } from '@diagramai/local-storage';
-import { parseWorkspaceLink, SyncClient, type WorkspaceAccess } from '@diagramai/sync-core';
+import { isWorkspaceLinkHash, parseWorkspaceLink, SyncClient, type WorkspaceAccess } from '@diagramai/sync-core';
 import { WorkspaceLibrary } from './library';
 
 function consumeLink(): { access?: WorkspaceAccess; invalid?: boolean } | null {
-  if (!window.location.hash.startsWith('#/workspace/')) return null;
+  if (!isWorkspaceLinkHash(window.location.hash)) return null;
   let access: WorkspaceAccess | undefined;
   try { access = parseWorkspaceLink(window.location.href); } catch { /* Never echo a secret-bearing URL. */ }
   window.history.replaceState(null, '', `${window.location.pathname}#/`);

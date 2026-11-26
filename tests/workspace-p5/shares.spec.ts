@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { createWorkspace, openLibrary, openWorkspaceDrawing, closeLibrary, updateLibrary } from '../helpers/workspace';
 import { editCloudNode, syncNow, closeCloud } from '../helpers/cloud';
 import { ready, nodeModel } from '../helpers/drawing';
+import { parseShareLink } from '@diagramai/sync-core';
 
 async function getShare(page: Page, name: string) {
   await page.getByRole('button', { name, exact: true }).click();
@@ -22,7 +23,7 @@ test('Kho uses main-area cards; Project and drawing links allow editing but neve
   const projectLink = await getShare(page, 'Chia sẻ Project Dự án đầu tiên');
   await page.getByRole('button', { name: 'Dự án đầu tiên', exact: true }).click();
   const drawingLink = await getShare(page, `Chia sẻ bản vẽ ${source.title}`);
-  expect(new URL(projectLink).hash.startsWith('#/share/')).toBe(true); expect(new URL(projectLink).search).toBe('');
+  expect(new URL(projectLink).hash.startsWith('#/s/')).toBe(true); expect(new URL(projectLink).search).toBe('');
   const context = await browser.newContext({ baseURL }), recipient = await context.newPage();
   const second = await browser.newContext({ baseURL }), one = await second.newPage();
   try {
@@ -34,12 +35,14 @@ test('Kho uses main-area cards; Project and drawing links allow editing but neve
     await recipient.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true }).click(); await ready(recipient);
     await editCloudNode(recipient, 'Tiếp nhận vật tư', 'Sửa từ link Project'); await syncNow(recipient);
     await openWorkspaceDrawing(page, source.title); await syncNow(page); await closeCloud(page); await expect(nodeModel(page, 'Sửa từ link Project')).toBeVisible();
-    await one.goto(drawingLink); await ready(one); await expect(nodeModel(one, 'Sửa từ link Project')).toBeVisible();
+    const legacy = new URL(drawingLink), drawingAccess = parseShareLink(drawingLink); legacy.hash = `/share/${drawingAccess.id}/${drawingAccess.key}`;
+    await one.goto(legacy.href); await ready(one); await expect(nodeModel(one, 'Sửa từ link Project')).toBeVisible();
     await editCloudNode(one, 'Sửa từ link Project', 'Sửa từ link bản vẽ'); await syncNow(one); await closeCloud(one);
     await openLibrary(one);
     await expect(one.getByRole('button', { name: `Mở bản vẽ ${source.title}`, exact: true })).toBeVisible();
     await expect(one.getByText('P5 fixture sibling', { exact: true })).toHaveCount(0); await expect(one.getByText('Project khác', { exact: true })).toHaveCount(0);
     expect(urls.some((url) => url.includes('dai_share_v1_'))).toBe(false);
+    expect(urls.some((url) => url.includes(new URL(projectLink).hash.slice(4)))).toBe(false);
     await one.screenshot({ path: testInfo.outputPath('drawing-scope-cards.png') });
     await closeLibrary(page); await syncNow(page); await closeCloud(page); await expect(nodeModel(page, 'Sửa từ link bản vẽ')).toBeVisible();
     await one.evaluate(async () => { await navigator.serviceWorker.ready; }); await expect.poll(() => one.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);

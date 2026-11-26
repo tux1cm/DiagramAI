@@ -7,6 +7,8 @@
 - Mở link trực tiếp trên Web đang nhớ kho khác sẽ hiện xác nhận dùng link vừa mở; không tự thay kho hoặc yêu cầu dán lại. Mã kho cho biết hai bên có đang dùng đúng cùng kho hay không.
 - **Người nhận:** chỉ gửi link từ **Chia sẻ** trên thẻ Project/bản vẽ. Họ mở trực tiếp và chỉ quản lý nội dung trong phạm vi link. Không gửi link kho chính cho người nhận; ai có link kho chính sẽ có quyền toàn kho.
 - App không còn nút tạo kho riêng trên mỗi thiết bị. Chưa có link thì vẫn giữ/sửa local; không tự đọc dữ liệu toàn kho từ Neon.
+- Mỗi máy/trình duyệt/profile mới mở link kho chính một lần. Sau đó app nhớ; dùng ẩn danh hoặc xóa dữ liệu trình duyệt thì phải mở lại. Bookmark riêng cần lưu đúng link kho chính từ nút Hiện link, không chỉ URL đã được xóa secret sau khi mở.
+- Link sao chép mới dùng dạng gọn `#/w/<mã>` (kho chính) hoặc `#/s/<mã>` (Project/bản vẽ), ngắn hơn khoảng 24–28% trên địa chỉ Pages hiện tại. Khóa bí mật và quyền không đổi; link dài cũ vẫn dùng được. Cập nhật Web/Desktop để mở dạng gọn, không dùng dịch vụ rút gọn ngoài vì link mang quyền chỉnh sửa.
 
 ## Đồng bộ thủ công hai chiều (điều chỉnh 2026-11-25)
 

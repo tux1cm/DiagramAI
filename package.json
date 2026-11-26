@@ -20,7 +20,7 @@
     "lint": "eslint . && node scripts/prepare-reference.mjs --check && node scripts/extract-ui-css.mjs --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:p5": "vitest run tests/unit/sync-api.test.ts tests/unit/sync-coordinator.test.ts tests/unit/sync-journal.test.ts tests/unit/workspace.test.ts tests/unit/workspace-library.test.ts tests/unit/scoped-shares.test.ts",
+    "test:p5": "vitest run tests/unit/sync-api.test.ts tests/unit/sync-coordinator.test.ts tests/unit/sync-journal.test.ts tests/unit/workspace.test.ts tests/unit/workspace-library.test.ts tests/unit/scoped-shares.test.ts tests/unit/compact-links.test.ts",
     "check:p5": "npm run lint && npm run typecheck && npm run test:p5",
     "test:p5:neon": "node scripts/test-sync-neon.mjs",
     "test:p5:web": "playwright test --config playwright.p5.config.ts",

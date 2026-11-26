@@ -40,7 +40,7 @@ export function WorkspacePanel({ workspace, shared, local, manual, linkBase, fil
     {error && <div className="storage-error" role="alert">{error}</div>}
     <p>Cloud đồng bộ thủ công hai chiều: tạo/sửa trên Web hoặc Desktop rồi bấm Đồng bộ để gửi; thiết bị kia bấm Đồng bộ để nhận. Tự lưu trên máy vẫn bật.</p>
     {share && <section className="confirmation share-result" aria-label={share.owner ? 'Link kho chính của bạn' : 'Link chia sẻ đã tạo'}><strong>{share.title}</strong><p>{share.owner ? 'Link kho chính dành riêng cho bạn, có quyền toàn kho. Dùng cùng link này trên Web và Desktop. Chỉ gửi link Project hoặc bản vẽ cho người khác, không gửi link kho chính.' : `Ai có link đều xem và sửa được ${share.scope}. Không cấp quyền sang Project hoặc bản vẽ khác.`}</p>
-      <textarea aria-label={share.owner ? 'Link kho chính' : 'Link chia sẻ'} readOnly value={share.url} rows={2} spellCheck={false} autoComplete="off" onFocus={(event) => event.target.select()}/>
+      <textarea aria-label={share.owner ? 'Link kho chính' : 'Link chia sẻ'} readOnly value={share.url} rows={1} spellCheck={false} autoComplete="off" onFocus={(event) => event.target.select()}/>
       <button className="btn" onClick={() => { void navigator.clipboard?.writeText(share.url).then(() => setCopyMessage('Đã sao chép link.')).catch(() => setCopyMessage('Chọn link rồi nhấn Ctrl+C.')); }}>Sao chép link</button><button className="btn" onClick={() => setShare(null)}>Ẩn link</button><span role="status">{copyMessage}</span>
     </section>}
     {!scoped && !state ? <div className="workspace-setup">
